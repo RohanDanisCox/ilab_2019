@@ -10,7 +10,10 @@
 
 # [1] ---- Load data ----
 
-  drop_auth()
+  token <- drop_auth()
+  saveRDS(token, "DropToken.RDS")
+
+drop_auth()
   drop_dir()
   
   drop_download("ilab2019/2017.feather",overwrite = TRUE)
