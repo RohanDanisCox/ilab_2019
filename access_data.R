@@ -10,17 +10,18 @@
 
 # [1] ---- Load data ----
 
-  token <- drop_auth()
-  saveRDS(token, "DropToken.RDS")
+  # These have been used to create drop_tokens on home computer and transferred to GCP.
+  #token <- drop_auth()
+  #saveRDS(token, "DropToken.RDS")
 
-drop_auth()
+  drop_auth(new_user = FALSE, rdstoken = "DropToken.RDS")
+  
   drop_dir()
   
   drop_download("ilab2019/2017.feather",overwrite = TRUE)
   
   data_2017 <- read_feather("2017.feather")
 
-  
   unlink("2017.feather")
     
   
