@@ -4,13 +4,13 @@
 
   library(readr)
   library(tidyverse)
-  library(feather)
+  #library(feather)
 
 # [1] ---- Define functions ----
 
   # Old method 
 
-  to_feather_old <- function(path,output) {
+  import_sales_old <- function(path,output) {
     data_path <- path
     files <- dir(path = data_path,pattern = "*.DAT")
     files %>%
@@ -53,7 +53,7 @@
   
   # New method
   
-  to_feather_new <- function(year) {
+  import_sales_new <- function(year) {
     data_path <- paste0("Data/new/",year)
     files <- dir(path = data_path,pattern = "*.DAT")
     files %>%
@@ -96,7 +96,7 @@
       filter(record_type == "B") %>%
       saveRDS(paste0("new_data_",year,".rds"))
     }
-  to_feather_2019 <- function(month) {
+  import_sales_2019 <- function(month) {
     data_path <- paste0("Data/new/2019/",month)
     files <- dir(path = data_path,pattern = "*.DAT")
     files %>%
@@ -142,7 +142,7 @@
   
   # Land value data
   
-  to_feather_land_value <- function(year) {
+  import_land_value <- function(year) {
     data_path <- paste0("Data/land_value/",year)
     year_1 <- as.numeric(year)-1
     year_2 <- year_1-1
@@ -176,21 +176,21 @@
   
   # Old method 
   
-  to_feather_old("Data/old","old_data.rds")
+  import_sales_old("Data/old","old_data.rds")
   
   # New method
   
   years <- as.character(2001:2018)
-  sapply(years,to_feather_new)
+  sapply(years,import_sales_new)
   
   months <- c("Jan","Feb","Mar","Apr","May","Jun")
-  sapply(months,to_feather_2019)
+  sapply(months,import_sales_2019)
   
   # Land value data
 
-  lv_2019 <- to_feather_land_value("2019")
-  lv_2018 <- to_feather_land_value("2018")
-  lv_2017 <- to_feather_land_value("2017")
+  lv_2019 <- import_land_value("2019")
+  lv_2018 <- import_land_value("2018")
+  lv_2017 <- import_land_value("2017")
   
 # [3] ---- Simplify Land Value Data ----
   
