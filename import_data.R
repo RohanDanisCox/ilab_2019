@@ -48,7 +48,7 @@
                          unknown_b = col_character()),
                        skip = 1)) %>%
       reduce(bind_rows) %>%
-      write_feather(output)
+      saveRDS(output)
   }
   
   # New method
@@ -94,7 +94,7 @@
                        skip = 1)) %>%
       bind_rows() %>%
       filter(record_type == "B") %>%
-      write_feather(paste0("new_data_",year,".feather"))
+      saveRDS(paste0("new_data_",year,".rds"))
     }
   to_feather_2019 <- function(month) {
     data_path <- paste0("Data/new/2019/",month)
@@ -137,7 +137,7 @@
                        skip = 1)) %>%
       bind_rows() %>%
       filter(record_type == "B") %>%
-      write_feather(paste0("new_data_2019_",month,".feather"))
+      saveRDS(paste0("new_data_2019_",month,".rds"))
   }
   
   # Land value data
@@ -176,7 +176,7 @@
   
   # Old method 
   
-  to_feather_old("Data/old","old_data.feather")
+  to_feather_old("Data/old","old_data.rds")
   
   # New method
   
@@ -198,6 +198,7 @@
     full_join(lv_2018) %>%
     full_join(lv_2017)
   
-  write_feather(land_value,"land_value.feather")
+  saveRDS(land_value,"land_value.rds")
+  
 
   
