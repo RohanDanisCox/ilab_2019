@@ -15,23 +15,58 @@
   library(broom)
   library(sf)
 
-# [1] ---- Load data ----
+# [1] ---- Set Up Dropbox ----
 
   # These have been used to create drop_tokens on home computer and transferred to GCP.
   #token <- drop_auth()
   #saveRDS(token, "DropToken.RDS")
-
-  drop_auth(new_user = FALSE, rdstoken = "DropToken.RDS")
   
+  drop_auth(new_user = FALSE, rdstoken = "DropToken.RDS")
   drop_dir()
   
-  drop_download("ilab2019/2017.feather",overwrite = TRUE)
-  
-  data_2017 <- read_feather("2017.feather")
+# [2] ---- Download sale_value data from Dropbox ----
 
-  unlink("2017.feather")
-    
+  # Define function to download all sale value RDS files
+  download_sales <- function(path) {
+    drop_download(path = path,local_path = "sale_value/",overwrite = TRUE)
+  }
   
+  # Get the paths
+  sales_path <- drop_dir(path = "ilab2019/sale_value") %>%
+    select(path_lower) %>%
+    as_vector()
+  
+  # Download all the sale value data
+  sapply(sales_path,download_sales)
+  
+  # Reset sales path to local machine
+  new_sales_path <- sales_path %>%
+    str_replace("/ilab2019/","")
+  
+  # Load all the sale value data into memory
+  sales_data <- sapply(new_sales_path,readRDS)
+  
+  # Split the old and new sales data
+  old_sales_data <- sales_data[[1]]
+  new_sales_data_raw <- sales_data[2:25]
+  new_sales_data <- new_sales_data_raw %>%
+    bind_rows()
+  
+  # Save off the new sales data
+  saveRDS(new_sales_data, "sale_value/new_sales_data.rds")
+  
+  # Upload to dropbox
+  drop_upload("sale_value/new_sales_data.rds","ilab2019/sale_value")
+  
+# [3] ---- Download land_value data from Dropbox ----
+  
+  drop_download("ilab2019/land_value/land_value.rds","land_value/land_value.rds",overwrite = TRUE)
+  
+  #Upload to memory
+  land_value <- readRDS("land_value/land_value.rds")
+  
+  
+# [4] ---- Extra work ----
   
   ### Need to write a function to upload files to dropbox using drop_upload
   
@@ -39,10 +74,11 @@
   ### if the data itself is not costly which it may very well not be then leave it in there.
   
   
+# [4] ---- Download Shapefiles ----
+  
   ### Work with shape files - https://data.gov.au/dataset/ds-dga-91e70237-d9d1-4719-a82f-e71b811154c6/details
   
   drop_download("ilab2019/NSW_LOCALITY_POLYGON_shp/NSW_LOCALITY_POLYGON_shp.shx")
-  
   
   ## Using the shape files
   
