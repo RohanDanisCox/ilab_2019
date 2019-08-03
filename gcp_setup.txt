@@ -1,0 +1,43 @@
+## Important: GCP setup for RStudio image - run on GCP Virtual Machine
+## Important: Set up firewall rule in the VPC Network to allow http and https access to port 8787 - this is the port that the RStudio Server runs on
+
+# establish password for user
+sudo passwd rohan_daniscox
+
+# go to root to make superuser
+sudo passwd
+su
+sudo usermod -G sudo rohan_daniscox
+
+# return to user
+su rohan_daniscox
+
+# install base r
+sudo apt-get update
+sudo apt-get install r-base
+sudo apt install r-base-dev
+
+# install git & set user
+sudo apt-get install git
+git config --global user.email "rohan.daniscox@gmail.com"
+git config --global user.name "rohan_gcp"
+
+# install libraries used for Tidyverse 
+sudo apt install libcurl4-openssl-dev libssl-dev libxml2-dev
+
+# install RStudio
+sudo apt-get install gdebi-core
+wget https://download2.rstudio.org/server/debian9/x86_64/rstudio-server-1.2.1335-amd64.deb
+sudo gdebi rstudio-server-1.2.1335-amd64.deb
+
+# Spatial mapping libraries for R 
+sudo apt-get install libgdal1-dev libproj-dev
+
+
+## Important: Can now access the external IP given by GCP and add :8787 - e.g. http://35.189.30.38:8787/ to access RStudio Server
+## Important: Log in with user rohan_daniscox and the password made in the first step
+
+
+
+
+
