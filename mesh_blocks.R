@@ -77,4 +77,62 @@
   mesh_block_check <- mesh_block_1 %>%
     distinct(SSC_NAME_2016, .keep_all = TRUE) %>%
     filter(GCCSA_NAME_2016 == "Greater Sydney")
+  
+# [4] ---- Alternate method - ratio of residential + commercial + industrial to parkland
+  
+  mesh_block <- mesh_block_category %>%
+    left_join(mesh_block_suburb, by = c("MB_CODE_2016", "STATE_CODE_2016", "STATE_NAME_2016", "AREA_ALBERS_SQKM")) #%>%
+  #select(MB_CODE_2016,MB_CATEGORY_NAME_2016,SSC_NAME_2016,AREA_ALBERS_SQKM, SA2_NAME_2016,SA3_NAME_2016)
+  
+  sa2_mesh_block <- mesh_block %>%
+    group_by(SA2_NAME_2016, MB_CATEGORY_NAME_2016) %>%
+    summarise(area_sa2 = sum(AREA_ALBERS_SQKM))
+  
+  sa2_mesh_block_1 <- sa2_mesh_block %>%
+    filter(MB_CATEGORY_NAME_2016 == "Parkland" | 
+             MB_CATEGORY_NAME_2016 == "Residential" | 
+             MB_CATEGORY_NAME_2016 == "Commercial" |
+             MB_CATEGORY_NAME_2016 == "Industrial") %>%
+    spread(key = MB_CATEGORY_NAME_2016, value = area_sa2) %>%
+    mutate(Parkland = case_when(is.na(Parkland) ~ 0,
+                                TRUE ~ Parkland),
+           Residential = case_when(is.na(Residential) ~ 0,
+                                TRUE ~ Residential),
+           Commercial = case_when(is.na(Commercial) ~ 0,
+                                   TRUE ~ Commercial),
+           Industrial = case_when(is.na(Industrial) ~ 0,
+                                   TRUE ~ Industrial)) %>%
+    mutate(green_ratio_sa2 = round(Parkland / (Residential+Commercial+Industrial),4)) %>%
+    select(SA2_NAME_2016,green_ratio_sa2)
+  
+  suburb_mesh_block <- mesh_block %>%
+    group_by(SSC_NAME_2016, MB_CATEGORY_NAME_2016) %>%
+    summarise(area_suburb = sum(AREA_ALBERS_SQKM))
+  
+  suburb_mesh_block_1 <- suburb_mesh_block %>%
+    filter(MB_CATEGORY_NAME_2016 == "Parkland" | 
+             MB_CATEGORY_NAME_2016 == "Residential" | 
+             MB_CATEGORY_NAME_2016 == "Commercial" |
+             MB_CATEGORY_NAME_2016 == "Industrial") %>%
+    spread(key = MB_CATEGORY_NAME_2016, value = area_suburb) %>%
+    mutate(Parkland = case_when(is.na(Parkland) ~ 0,
+                                TRUE ~ Parkland),
+           Residential = case_when(is.na(Residential) ~ 0,
+                                   TRUE ~ Residential),
+           Commercial = case_when(is.na(Commercial) ~ 0,
+                                  TRUE ~ Commercial),
+           Industrial = case_when(is.na(Industrial) ~ 0,
+                                  TRUE ~ Industrial)) %>%
+    mutate(green_ratio_suburb = round(Parkland / (Residential+Commercial+Industrial),4)) %>%
+    select(SSC_NAME_2016,green_ratio_suburb)
+  
+  mesh_block_1 <- mesh_block %>%
+    left_join(suburb_mesh_block_1) %>%
+    left_join(sa2_mesh_block_1) %>%
+    mutate(green_score = green_ratio_suburb * 0.5 + green_ratio_sa2 * 0.5) %>%
+    mutate(green_score_decile = ntile(green_score,10))
+  
+  mesh_block_check <- mesh_block_1 %>%
+    distinct(SSC_NAME_2016, .keep_all = TRUE) %>%
+    filter(GCCSA_NAME_2016 == "Greater Sydney")
     
