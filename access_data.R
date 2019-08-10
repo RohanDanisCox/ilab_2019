@@ -15,6 +15,7 @@
   library(broom)
   library(sf)
 
+
 # [1] ---- Set Up Dropbox ----
 
   # These have been used to create drop_tokens on home computer and transferred to GCP.
@@ -84,8 +85,12 @@
   
   shp <- readOGR("NSW_LOCALITY_POLYGON_shp")
   map <- ggplot() + geom_polygon(data = shp, aes(x = long, y = lat, group = group), colour = "black", fill = NA)
+  map
 
   ## Can get a map from Google if we want
+  
+  register_google(key = "") # Need to log in at this address and copy key https://console.cloud.google.com/apis/credentials?project=ilab2019-245222&folder&organizationId
+  
   mapImage <- get_map(location = c(lon = 147, lat = -33),
                       color = "color",
                       #source = "osm",
@@ -98,6 +103,8 @@
   
   ## But for now it probably makes more sense to leave it out - no need to run up the cost
   
+  
+  
   check <- fortify(shp)
   
   broom <- sp_tidi
@@ -105,9 +112,6 @@
   ggplot() +
     geom_polygon(data = check, aes(x = long, y = lat, group = group), colour = "black", fill = NA)
   
-  
-  ?get_map
-  ?register_google
   map + 
     theme_void() + 
     coord_map(xlim = c(-2, 2),ylim = c(50, 51))
@@ -122,4 +126,7 @@
   ### Need to figure out how to use broom to get a tidy table that I can use instead of fortify
   ?broom
   ?sp_tidiers
+  
+  
+  ### 
   
