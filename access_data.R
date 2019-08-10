@@ -66,6 +66,10 @@
   #Upload to memory
   land_value <- readRDS("land_value/land_value.rds")
   
+# [4] ---- Download NSW mesh_blocks data from Dropbox ----
+  
+  drop_download("ilab2019/mesh_blocks/mesh_block_category.csv","mesh_blocks/mesh_block_category.csv",overwrite = TRUE)
+  drop_download("ilab2019/mesh_blocks/mesh_block_suburb.csv","mesh_blocks/mesh_block_suburb.csv",overwrite = TRUE)
   
 # [4] ---- Extra work ----
   

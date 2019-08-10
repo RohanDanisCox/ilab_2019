@@ -17,14 +17,14 @@
 
 # [1] ---- Import mesh_block data ----
 
-  mesh_block_category <- read_csv("Data/ABS/mesh_block_category.csv")
-  mesh_block_suburb <- read_csv("Data/ABS/mesh_block_suburb.csv")
+  mesh_block_category <- read_csv("mesh_blocks/mesh_block_category.csv")
+  mesh_block_suburb <- read_csv("mesh_blocks/mesh_block_suburb.csv")
 
   
   table(mesh_block_category$GCCSA_NAME_2016)
   
   table(mesh_block_category$MB_CATEGORY_NAME_2016)
-# [2] ---- Calculate Green Score (Parkland & Include Primary Industries )
+# [2] ---- Calculate Green Score (Parkland & Include Primary Industries ) ----
 
   mesh_block <- mesh_block_category %>%
     left_join(mesh_block_suburb, by = c("MB_CODE_2016", "STATE_CODE_2016", "STATE_NAME_2016", "AREA_ALBERS_SQKM")) #%>%
@@ -72,13 +72,13 @@
     mutate(green_score = green_proportion_suburb * 0.5 + green_proportion_sa2 * 0.5) %>%
     mutate(green_score_decile = ntile(green_score,10))
 
-# [3] ---- Investigate scores
+# [3] ---- Investigate scores ----
   
   mesh_block_check <- mesh_block_1 %>%
     distinct(SSC_NAME_2016, .keep_all = TRUE) %>%
     filter(GCCSA_NAME_2016 == "Greater Sydney")
   
-# [4] ---- Alternate method - ratio of residential + commercial + industrial to parkland
+# [4] ---- Alternate method - ratio of residential + commercial + industrial to parkland ----
   
   mesh_block <- mesh_block_category %>%
     left_join(mesh_block_suburb, by = c("MB_CODE_2016", "STATE_CODE_2016", "STATE_NAME_2016", "AREA_ALBERS_SQKM")) #%>%
@@ -133,6 +133,5 @@
     mutate(green_score_decile = ntile(green_score,10))
   
   mesh_block_check <- mesh_block_1 %>%
-    distinct(SSC_NAME_2016, .keep_all = TRUE) %>%
-    filter(GCCSA_NAME_2016 == "Greater Sydney")
+    distinct(SSC_NAME_2016, .keep_all = TRUE) 
     
