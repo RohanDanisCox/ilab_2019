@@ -14,6 +14,7 @@
   library(ggmap)
   library(broom)
   library(sf)
+  library(RColorBrewer)
 
 # [1] ---- Download Shapefiles ----
 
@@ -117,12 +118,50 @@
   try_3 <- try_2 %>%
     filter(GCCSA_NAME_2016 == "Greater Sydney")
   
-  ggplot(try_3)+
+  ggplot(try_2)+
     geom_sf(mapping = aes(fill=green_score_decile))
   
-  ?geom_sf
+  mypalette<-brewer.pal(11,"RdYlGn")
+  
+  mapview(try_2, zcol="green_score_decile",col.regions = mypalette)
+  
+
     
   
 
 ?left_join
+# [2] ---- Trying mapview ---- # needed to add Cairo
+  
+  install.packages("mapview")
+  
+  install.packages("gdtools")
+  
+  library(mapview)
+  library(devtools)
+  
+  devtools::install_github('r-lib/later')
+  
+  mapview(school_catch)
+  
+  install.packages("devtools")
+  
+# [2] ---- Trying schools ----
+  
+  gov_schools <- read_sf("education/gov_schools")
+  nongov_schools <- read_sf("education/nongov_schools")
+  school_catch <- read_sf("education/school_catch")
+  
+  ggplot(nongov_schools)+
+    geom_sf()
+  
+  test <- gov_schools %>%
+    filter(X28town_sub == "Haberfield")
+  
+  ggplot(test)+
+    geom_sf()
+  
+  ggplot(school_catch)+
+    geom_sf()
+  
+  
   

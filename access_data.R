@@ -83,6 +83,32 @@
   
   ### Work with shape files - https://data.gov.au/dataset/ds-dga-91e70237-d9d1-4719-a82f-e71b811154c6/details
   
+  # Define function to download all sale value RDS files
+  download_shape <- function(path,local_path) {
+    drop_download(path = path,local_path = local_path,overwrite = TRUE)
+  }
+  
+  # Get the paths
+  gov_schools_path <- drop_dir(path = "ilab2019/education/gov_schools") %>%
+    select(path_lower) %>%
+    as_vector()
+  
+  nongov_schools_path <- drop_dir(path = "ilab2019/education/nongov_schools") %>%
+    select(path_lower) %>%
+    as_vector()
+  
+  school_catch_path <- drop_dir(path = "ilab2019/education/school_catchment") %>%
+    select(path_lower) %>%
+    as_vector()
+  
+  # Download all the sale value data
+  sapply(gov_schools_path,download_shape,local_path = "education/gov_schools")
+  sapply(nongov_schools_path,download_shape,local_path = "education/nongov_schools")
+  sapply(school_catch_path,download_shape,local_path = "education/school_catch")
+  
+  
+  
+  drop_download("ilab2019/NSW_LOCALITY_POLYGON_shp/NSW_LOCALITY_POLYGON_shp.shx")
   drop_download("ilab2019/NSW_LOCALITY_POLYGON_shp/NSW_LOCALITY_POLYGON_shp.shx")
   
   ## Using the shape files
