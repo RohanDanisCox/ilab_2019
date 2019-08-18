@@ -83,7 +83,7 @@
   sales_unique_suburbs <- sales_data %>%
     group_by(locality) %>%
     summarise(sales = n()) %>%
-    filter(sales > 10)
+    filter(sales > 2)
   
   # There are 64k sales missing a suburb - mostly old and look like they are missing other information
   sales_missing_suburb <- sales_data %>%
@@ -93,6 +93,41 @@
   land_value_unique_suburbs <- land_value %>%
     group_by(locality) %>%
     summarise(properties = n())
+  
+  
+# [4] ---- Try to match suburb names to suburb base file ----
     
-
+  sales_unique_suburbs_1 <- sales_unique_suburbs %>%
+    mutate(lower_case = tolower(locality)) %>%
+    mutate(title_case = tools::toTitleCase(lower_case))
+  
+  land_value_unique_suburbs_1 <- land_value_unique_suburbs  %>%
+    mutate(lower_case = tolower(locality)) %>%
+    mutate(title_case = tools::toTitleCase(lower_case))
+  
+  # Try matching with suburbs 
+  
+  suburbs <- readRDS("data/created/suburbs.rds")
+  suburb_crime <- read_csv("data/created/suburb_match_crime.csv")
+  
+  suburbs_1 <- suburbs %>%
+    select(1:2) %>%
+    left_join(suburb_crime, by = c("suburb_name" = "suburb_base")) 
+  
+  suburbs_2 <- suburbs_1 %>%
+    left_join(sales_unique_suburbs_1, by = c("suburb_name" = "title_case"))
+  
+  sales_unique_suburbs_2 <- sales_unique_suburbs_1 %>%
+    full_join(suburbs_1, by = c("title_case" = "suburb_name")) %>%
+    rename(suburb_base = title_case)
+  
+  land_value_unique_suburbs_2 <- land_value_unique_suburbs_1%>%
+    full_join(suburbs_1, by = c("title_case" = "suburb_name")) %>%
+    rename(suburb_base = title_case)
+    
+  write_csv(sales_unique_suburbs_2,"data/created/suburb_match_sales.csv")
+  write_csv(land_value_unique_suburbs_2,"data/created/suburb_match_land_value.csv")
+  
+  drop_upload("data/created/suburb_match_sales.csv","ilab2019/")
+  drop_upload("data/created/suburb_match_land_value.csv","ilab2019/")
   
