@@ -22,25 +22,43 @@ library(leafpop)
 
 crime <- read_csv("data/crime/crime by suburb.csv") 
 
-# [2] ---- Investigate the crime data ----
+# [2] ---- Establish a matching criteria to base suburb names ----
 names(crime)
 
 crime_suburbs <- crime %>%
-  rename(suburb_name = Suburb) %>%
-  group_by(suburb_name) %>%
-  summarise(n = n())
+  rename(suburb_crime = Suburb) %>%
+  distinct(suburb_crime)
 
-crime_completeness <- crime %>%
-  rename(suburb_name = Suburb) %>%
+suburb_base <- readRDS("data/created/suburbs.rds")
+
+missing_from_suburb_base <- suburb_base %>%
+  anti_join(crime_suburbs, by = c("suburb_name" = "suburb_crime")) %>%
+  select(suburb_name)
+
+fix1 <- missing_from_suburb_base %>%
+  mutate(suburb_crime = str_replace(suburb_name," \\(NSW\\)","")) %>%
+  mutate(suburb_crime = str_replace(suburb_crime," - NSW","")) 
+
+crime_suburbs_1 <- crime_suburbs %>%
+  left_join(fix1, by = "suburb_crime") %>%
+  mutate(suburb_name = case_when(is.na(suburb_name) ~ suburb_crime,
+                                 !is.na(suburb_name) ~ suburb_name))
+
+suburb_match_crime <- crime_suburbs_1 %>%
+  select(suburb_base = suburb_name,suburb_crime) %>%
+  write_csv("data/created/suburb_match_crime.csv")
+
+crime_1 <- crime %>%
+  left_join(crime_suburbs_1, by = c("Suburb" = "suburb_crime")) %>%
+  select(292,2:291)
+
+# [3] ---- Investigate crime ----
+
+crime_completeness <- crime_1 %>%
   gather(key = "month_year", value = "value", 4:291) %>%
   separate(month_year,into = c("month","year"),sep = "-") %>%
   mutate(year = case_when(year <90 ~ as.numeric(paste0("20",year)),
                           year >90 ~ as.numeric(paste0("19",year))))
-
-crime_non_zero <- crime_completeness %>%
-  filter(value >0)
-
-summary(crime_completeness)
 
 crime_summary <- crime_completeness %>%
   group_by(suburb_name,`Offence category`) %>%
@@ -79,41 +97,8 @@ crime_score <- overall_crime %>%
   mutate(log_crime_score = case_when(crime_score == 0 ~ 0,
                                      crime_score > 0 ~ log(crime_score)))
 
+# [4] ---- Save off crime score ----
 
-class(violent_crime_suburb$month_year)
+write_rds(crime_score,"data/created/crime_score.rds")
 
-?separate
-  crime_completeness %>%
-  group_by(`Offence category`) %>%
-  summarise(number = sum(value)) %>%
-  select(`Offence category`)
-
-violent_crime[11:21,]
-
-crime_completeness %>% dim
-
-?gather
-  
-
-# compare suburbs with suburb base
-suburbs <- readRDS("data/created/suburbs.rds")
-crime_suburbs <- crime_suburbs %>%
-  select(1) %>%
-  mutate(crime_matched = TRUE)
-
-suburb_match <- suburbs %>%
-  select(1:13)
-
-full_join <- suburb_match %>%
-  full_join(crime_suburbs)
-
-write_csv(full_join, "data/created/matched.csv")
-
-drop_upload("data/created/matched.csv","ilab2019/")
-
-not_in_base <- suburbs %>%
-  anti_join(crime_suburbs, by = "suburb_name")
-
-not_in_crime <- crime_suburbs %>%
-  anti_join(suburbs, by = "suburb_name")
 
