@@ -97,6 +97,19 @@ crime_completeness %>% dim
 
 # compare suburbs with suburb base
 suburbs <- readRDS("data/created/suburbs.rds")
+crime_suburbs <- crime_suburbs %>%
+  select(1) %>%
+  mutate(crime_matched = TRUE)
+
+suburb_match <- suburbs %>%
+  select(1:13)
+
+full_join <- suburb_match %>%
+  full_join(crime_suburbs)
+
+write_csv(full_join, "data/created/matched.csv")
+
+drop_upload("data/created/matched.csv","ilab2019/")
 
 not_in_base <- suburbs %>%
   anti_join(crime_suburbs, by = "suburb_name")
