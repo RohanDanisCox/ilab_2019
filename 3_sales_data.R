@@ -15,6 +15,8 @@
   library(broom)
   library(sf)
   library(readxl)
+  library(lubridate)
+  library(ggplot2)
 
 # [1] ---- Load Data ----
   
@@ -182,5 +184,76 @@
     summarise(n = n(),
               average_2018 = mean(land_value_2018, na.rm = TRUE),
               median = median(land_value_2018,na.rm = TRUE))
+  
+# [8] ---- Dwelling density ---- 
+  
+  # This would definitely be more accurate to get from Census data
+  dwellings_per_suburb <- matched_land_value %>%
+    group_by(suburb_code,suburb_name) %>%
+    summarise(total_dwellings = n()) 
+  
+# [8] ---- Relative Turnover per year ---- 
+  
+  # probably want to create some grouping variables year, quarter, month etc
+  matched_sales_2 <- matched_sales %>%
+    mutate(year = floor_date(contract_date,"year"),
+           quarter = floor_date(contract_date,"quarter"),
+           month = floor_date(contract_date,"month"))
+  
+  # This would definitely be more accurate to get from Census data
+  sales_per_year <- matched_sales_2 %>%
+    group_by(year) %>%
+    summarise(sales = n()) %>%
+    filter(year >= 1989-01-01)
+  
+  # visualise distribution - something is definitely wrong in hurstville
+  ggplot(sales_per_year, aes(x = year, y=sales)) +
+    geom_line()
+
+  summary(matched_sales$contract_date)
+  summary(matched_sales$settlement_date)
+    
+  # Investigate hurstville 
+  
+  hurstville <- matched_sales_2 %>%
+    filter(suburb_name == "Hurstville")
+    
+  hurstville_1 <- hurstville
+    group_by(street_name, year) %>%
+    summarise(n = n())
+  
+  hurstville_2 <- hurstville %>%
+    filter(street_name %in% c("FOREST RD","PEARL ST")) %>%
+    group_by(house_number,street_name) %>%
+    summarise(n = n())
+  
+  hurstville_3 <- hurstville %>%
+    filter(street_name %in% c("FOREST RD","PEARL ST")) %>%
+    filter(house_number %in% c("1 B","458","460"))
+  
+  hurstville_4 <- hurstville_3 %>%
+    group_by(house_number,street_name,strata_lot_number) %>%
+    summarise(n = n())
+  
+  hurstville_5 <- hurstville_3 %>%
+    group+
+    
+  hurstville_land <- matched_land_value %>%
+    filter(suburb_name == "Hurstville") %>%
+    filter(street_name %in% c("FOREST RD","PEARL ST")) 
+  
+  hurstville_delete <- hurstville %>%
+    select(-sale_counter) %>%
+    distinct()
+    
+  overall_ignore_sales_counter <- matched_sales %>%
+    select(-sale_counter) %>%
+    distinct()
+  
+  matched_sales <- overall_ignore_sales_counter
+  
+  data %>% 
+    group_by(month=floor_date(date, "month")) %>%
+    summarize(summary_variable=sum(value))
   
   
