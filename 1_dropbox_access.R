@@ -152,4 +152,3 @@
   
   # Metro Aria data
   sapply(metro_aria_path,my_download,local_path = "data/metro_aria") 
-  

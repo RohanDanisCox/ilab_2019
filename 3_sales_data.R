@@ -14,6 +14,7 @@
   library(ggmap)
   library(broom)
   library(sf)
+  library(readxl)
 
 # [1] ---- Load Data ----
   
@@ -131,4 +132,55 @@
   
   drop_upload("data/created/suburb_match_sales.csv","ilab2019/")
 
+# [5] ---- Download cleaned suburb file ----
+  
+  matching_suburbs <- read_xlsx("data/matching suburbs.xlsx", sheet = 1)
+  
+  sales_match <- matching_suburbs %>%
+    select(suburb_code,suburb_name,locality = sales_locality,post_code = sales_post_code) %>%
+    mutate(post_code = as.numeric(post_code)) %>%
+    filter(!is.na(locality)) %>%
+    distinct()
+  
+  saveRDS(sales_match,"data/created/sales_match.rds")
+  
+  land_value_match <- matching_suburbs %>%
+    select(suburb_code,suburb_name,locality = land_value_locality,post_code = land_value_post_code) %>%
+    mutate(post_code = as.numeric(post_code)) %>%
+    filter(!is.na(locality)) %>%
+    distinct()
+  
+  saveRDS(land_value_match,"data/created/land_value_match.rds")
+  
+# [6] ---- Matching up to data and saving off ----
+  
+  sales_match <- readRDS("data/created/sales_match.rds")
+  land_value_match <- readRDS("data/created/land_value_match.rds")
+  
+  sales_data1 <- sales_data %>%
+    left_join(sales_match, by = c("locality","post_code"))
+  
+  land_value1 <- land_value %>%
+    left_join(land_value_match, by = c("locality","post_code"))
+  
+  saveRDS(sales_data1,"data/sales/matched_sales.rds")
+  saveRDS(land_value1,"data/land_value/matched_land_value.rds")
+  
+# [7] ---- Can start from here now ----  
+  
+  matched_land_value <- readRDS("data/land_value/matched_land_value.rds")
+  matched_sales <- readRDS("data/sales/matched_sales.rds")
+  
+  matched_sales_1 <- matched_sales %>%
+    group_by(suburb_code,suburb_name) %>%
+    summarise(n = n(),
+              average = mean(purchase_price,na.rm = TRUE),
+              median = median(purchase_price,na.rm = TRUE))
+  
+  matched_land_value_1 <- matched_land_value %>%
+    group_by(suburb_code,suburb_name) %>%
+    summarise(n = n(),
+              average_2018 = mean(land_value_2018, na.rm = TRUE),
+              median = median(land_value_2018,na.rm = TRUE))
+  
   
