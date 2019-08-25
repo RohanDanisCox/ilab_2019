@@ -47,7 +47,16 @@
   str(old_sales_data)
   str(new_sales_data)
   
+  old_zones <- read_xlsx("data/sales/zoning.xlsx", sheet = 1) %>%
+    select(zone_code = Zone,
+           zone_description = `Code Name`)
+  
+  new_zones <- read_xlsx("data/sales/zoning.xlsx", sheet = 2) %>%
+    mutate(zoning = case_when(zoning == "Unknown" ~ zone_code,
+                              TRUE ~ zoning))
+  
   old_sales_data1 <- old_sales_data %>%
+    left_join(old_zones, by = "zone_code") %>%
     mutate(sale_counter = NA_real_,
            download_date = NA_real_,
            property_name = NA_real_,
@@ -61,21 +70,21 @@
            dealing_number =  NA_character_) %>%
     select(record_type,district_code,download_date,source,valuation_number,property_id,sale_counter,property_name,
            property_id,unit_number,house_number,street_name,locality,post_code,area,area_type,dimensions,land_description,
-           contract_date,purchase_price,settlement_date,zoning,zone_code,nature_of_property,primary_purpose,strata_lot_number,
+           contract_date,purchase_price,settlement_date,zoning,zone_code,zone_description,nature_of_property,primary_purpose,strata_lot_number,
            comp_code,vendor_name,purchaser_name,sale_code,interest_of_sale,dealing_number)
   
   new_sales_data1 <- new_sales_data %>%
+    left_join(new_zones, by = "zoning") %>%
     mutate(source = NA_character_,
            valuation_number = NA_character_,
            land_description = NA_character_,
            dimensions = NA_character_,
-           zone_code = NA_character_,
            vendor_name = NA_character_,
            purchaser_name = NA_character_,
            property_id = as.numeric(property_id)) %>%
     select(record_type,district_code,download_date,source,valuation_number,property_id,sale_counter,property_name,
          property_id,unit_number,house_number,street_name,locality,post_code,area,area_type,dimensions,land_description,
-         contract_date,purchase_price,settlement_date,zoning,zone_code,nature_of_property,primary_purpose,strata_lot_number,
+         contract_date,purchase_price,settlement_date,zoning,zone_code, zone_description,nature_of_property,primary_purpose,strata_lot_number,
          comp_code,vendor_name,purchaser_name,sale_code,interest_of_sale,dealing_number)
 
   sales_data <- bind_rows(old_sales_data1,new_sales_data1)
@@ -185,6 +194,62 @@
               average_2018 = mean(land_value_2018, na.rm = TRUE),
               median = median(land_value_2018,na.rm = TRUE))
   
+# [8] ---- What are the useful variables? ---- 
+  
+  
+  
+  sales <- matched_sales %>%
+    select(-c(record_type,download_date,source,sale_counter,property_name,dimensions,land_description,
+              vendor_name,purchaser_name,sale_code,interest_of_sale)) %>%
+    filter(is.na(area_type) | area_type %in% c("H","M"),
+           is.na(nature_of_property) | nature_of_property %in% c("3","R","V")) %>%
+    mutate(district_code = as.numeric(district_code),
+           valuation_number = as.numeric(valuation_number),
+           area_type = as.factor(case_when(is.na(area_type) ~ NA_character_,
+                                           TRUE ~ area_type)),
+           nature_of_property = as.factor(case_when(nature_of_property == "3" ~ "Other",
+                                                    nature_of_property == "R" ~ "Residence",
+                                                    nature_of_property == "V" ~ "Vacant",
+                                                    is.na(nature_of_property) ~ NA_character_)),
+           strata_lot_number = as.numeric(strata_lot_number),
+           zoning = as.factor(zoning),
+           zone_code = as.factor(zone_code),
+           zone_description = as.factor(zone_description),
+           property_type = as.factor(case_when(is.na(strata_lot_number) ~ "House",
+                                     !is.na(strata_lot_number) ~ "Apartment")),
+           unit_flag = as.factor(case_when(is.na(unit_number) ~ "House",
+                                           !is.na(unit_number) ~ "Apartment")))
+  
+  table(sales$property_type,sales$unit_flag)
+  table(sales$unit_flag)
+  table(sales$property_type)
+  
+  test <- sales %>%
+    filter(unit_flag == "Apartment" & property_type == "House")
+  
+  test2 <- sales %>%
+    filter(unit_flag == "House" & property_type == "Apartment")
+  summary(sales)
+           
+      select(distict_code, valuation_number,property_id,unit_number,house_number,street_name,locality,
+             post_code,area,area_type,
+             
+             
+  
+  # Nature of property
+  
+  summary(matched_land_value)
+  glimpse(matched_sales)
+  summary(matched_sales)
+  summary(sales)
+  
+  table(matched_sales$zoning)
+  
+  
+  
+  
+  
+  
 # [8] ---- Dwelling density ---- 
   
   # This would definitely be more accurate to get from Census data
@@ -255,5 +320,7 @@
   data %>% 
     group_by(month=floor_date(date, "month")) %>%
     summarize(summary_variable=sum(value))
+  
+  
   
   
