@@ -17,6 +17,7 @@
   library(readxl)
   library(lubridate)
   library(ggplot2)
+  library(forcats)
 
 # [1] ---- Load Data ----
   
@@ -196,59 +197,82 @@
   
 # [8] ---- What are the useful variables? ---- 
   
-  
-  
   sales <- matched_sales %>%
     select(-c(record_type,download_date,source,sale_counter,property_name,dimensions,land_description,
-              vendor_name,purchaser_name,sale_code,interest_of_sale)) %>%
+              vendor_name,purchaser_name,sale_code,interest_of_sale,comp_code,dealing_number)) %>%
     filter(is.na(area_type) | area_type %in% c("H","M"),
            is.na(nature_of_property) | nature_of_property %in% c("3","R","V")) %>%
     mutate(district_code = as.numeric(district_code),
            valuation_number = as.numeric(valuation_number),
-           area_type = as.factor(case_when(is.na(area_type) ~ NA_character_,
+           area_type = fct_explicit_na(case_when(is.na(area_type) ~ NA_character_,
                                            TRUE ~ area_type)),
-           nature_of_property = as.factor(case_when(nature_of_property == "3" ~ "Other",
+           area = case_when(area_type == "H" ~ area *10000,
+                            TRUE ~ area),
+           nature_of_property = fct_explicit_na(case_when(nature_of_property == "3" ~ "Other",
                                                     nature_of_property == "R" ~ "Residence",
                                                     nature_of_property == "V" ~ "Vacant",
                                                     is.na(nature_of_property) ~ NA_character_)),
            strata_lot_number = as.numeric(strata_lot_number),
-           zoning = as.factor(zoning),
-           zone_code = as.factor(zone_code),
-           zone_description = as.factor(zone_description),
-           property_type = as.factor(case_when(is.na(strata_lot_number) ~ "House",
-                                     !is.na(strata_lot_number) ~ "Apartment")),
-           unit_flag = as.factor(case_when(is.na(unit_number) ~ "House",
-                                           !is.na(unit_number) ~ "Apartment")))
+           zoning = fct_explicit_na(case_when(is.na(zoning) ~ NA_character_,
+                                        TRUE ~ zoning)),
+           zone_code = fct_explicit_na(case_when(is.na(zone_code) ~ NA_character_,
+                                        TRUE ~ zone_code)),
+           zone_description = fct_explicit_na(case_when(is.na(zone_description) ~ NA_character_,
+                                           TRUE ~ zone_description)),
+           property_type = case_when(is.na(strata_lot_number) & is.na(unit_number) ~ "House",
+                                     TRUE ~ "Apartment"),
+           property_type = case_when(zone_code == "R" & area > 10000 ~ "Land",
+                                     TRUE ~ property_type),
+           property_type = fct_explicit_na(case_when(property_type == "House" & 
+                                                       (str_detect(primary_purpose,"FARM") |
+                                                          str_detect(primary_purpose,"LAND") | 
+                                                          str_detect(primary_purpose,"RURAL") |
+                                                          primary_purpose %in% c("ACREAGE")) ~ "Land",
+                                                     TRUE ~ property_type)))
+  sales_1 <- sales %>%
+    filter(purchase_price > 0) %>%
+    filter(contract_date > as.Date("1990/01/01") & contract_date < as.Date("2019/07/01")) %>% 
+    filter(!(area == "(Missing)" & zone_code == "(Missing)" & zoning == "(Missing)" & is.na(primary_purpose))) %>%
+    distinct() 
   
-  table(sales$property_type,sales$unit_flag)
-  table(sales$unit_flag)
-  table(sales$property_type)
+  sales_2 <- sales_1 %>%
+    mutate(year = floor_date(contract_date,"year"),
+           quarter = floor_date(contract_date,"quarter"),
+           month = floor_date(contract_date,"month"))
   
-  test <- sales %>%
-    filter(unit_flag == "Apartment" & property_type == "House")
+# [9] ---- How to calculate a moving median ----  
   
-  test2 <- sales %>%
-    filter(unit_flag == "House" & property_type == "Apartment")
-  summary(sales)
-           
-      select(distict_code, valuation_number,property_id,unit_number,house_number,street_name,locality,
-             post_code,area,area_type,
-             
-             
+  quarters <- sales_2 %>%
+    distinct(quarter) %>%
+    filter(quarter > as.Date("2015/01/01")) # this line is just for testing
   
-  # Nature of property
+  suburbs <- sales_2 %>%
+    distinct(suburb_name) %>%
+    filter(suburb_name < "B") # this line is just for testing
   
-  summary(matched_land_value)
-  glimpse(matched_sales)
-  summary(matched_sales)
-  summary(sales)
+  property_type <- sales_2 %>%
+    distinct(property_type)
   
-  table(matched_sales$zoning)
-  
-  
-  
-  
-  
+  params <- tibble::tribble(
+    ~ date, ~ suburb, ~ property_type,
+    as.Date("2018-10-01"), "Haberfield", "House",
+    as.Date("2019-01-01"), "Armidale", "House",
+    as.Date("2019-04-01"), "Abercrombie",  "House",
+  )
+    
+  roll_median <- function(date, suburb,property_type) {
+    median <- sales_2 %>%
+      select(quarter,contract_date, suburb_name, purchase_price,property_type) %>% # will need to stick property type back in at some stage
+      filter(suburb_name == suburb) %>%
+      filter(property_type == property_type) %>%
+      filter(contract_date <= date & contract_date > date-months(6)) %>%
+      summarise(median = median(purchase_price,na.rm = TRUE))
+    as.integer(median)
+  }
+
+  check <- params %>%
+    mutate(median = pmap_dbl(params,roll_median))
+
   
 # [8] ---- Dwelling density ---- 
   
@@ -322,5 +346,64 @@
     summarize(summary_variable=sum(value))
   
   
+# TRASH
   
+  
+  
+  sales_2 <- sales_1 %>%
+    filter(is.na(area)) %>%
+    filter(property_type == "House") %>%
+    filter(zone_code == "(Missing)") %>%
+    count(year)
+  
+  
+  
+  table(sales$property_type,sales$zone_code)
+  table(sales$primary_purpose)
+  
+  summary <- sales %>%
+    group_by(primary_purpose) %>%
+    summarise(n = n()) %>%
+    filter(n >50)
+  
+  
+  sales %>%
+    filter(primary_purpose == "APARTMENT") %>%
+    count(property_type)
+  summarise(property_type)
+  
+  sales %>% 
+    filter(str_detect(primary_purpose,"RURAL")) %>%
+    count(primary_purpose) %>%
+    arrange(desc(n))
+  
+  check <- sales %>%
+    filter(area > 1000000) %>%
+    filter(purchase_price < 100000)
+  
+  
+  
+  table(sales$property_type)
+  
+  test <- sales %>%
+    filter(unit_flag == "Apartment" & property_type == "House")
+  
+  test2 <- sales %>%
+    filter(unit_flag == "House" & property_type == "Apartment")
+  summary(sales)
+  
+  select(distict_code, valuation_number,property_id,unit_number,house_number,street_name,locality,
+         post_code,area,area_type,
+         
+         
+         
+         # Nature of property
+         
+         summary(matched_land_value)
+         glimpse(matched_sales)
+         summary(matched_sales)
+         summary(sales)
+         
+         table(matched_sales$zoning)
+        
   
