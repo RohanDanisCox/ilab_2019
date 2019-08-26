@@ -18,6 +18,7 @@
   library(lubridate)
   library(ggplot2)
   library(forcats)
+  library(data.table)
 
 # [1] ---- Load Data ----
   
@@ -197,6 +198,10 @@
   
 # [8] ---- What are the useful variables? ---- 
   
+  matched_sales_bio <- matched_sales %>% map_df(~(data.frame(n_distinct = n_distinct(.x),
+                                                             class = class(.x))),
+                                                .id = "variable")
+  
   sales <- matched_sales %>%
     select(-c(record_type,download_date,source,sale_counter,property_name,dimensions,land_description,
               vendor_name,purchaser_name,sale_code,interest_of_sale,comp_code,dealing_number)) %>%
@@ -242,6 +247,64 @@
   
 # [9] ---- How to calculate a moving median ----  
   
+  # Get the distinct calculation dataframe
+  df <- sales_2 %>%
+    distinct(quarter,suburb_name,property_type) %>%
+    select(dates = quarter, suburbs = suburb_name, property = property_type)
+
+  #subset the data 
+  med_data <- sales_2 %>%
+    select(quarter,contract_date, suburb_name, purchase_price,property_type) 
+  
+  
+  # Build a function
+  roll_median <- function(dates,suburbs,property) {
+    median <- med_data %>%
+      filter(suburb_name == suburbs & 
+               #property_type == property &
+               contract_date <= dates & contract_date > dates-months(6)) %>%
+      summarise(median = median(purchase_price,na.rm = TRUE))
+    as.integer(median)
+  }
+  
+  # subset 
+  
+  df1 <- df[200000:200010,]
+  
+  system.time(df_roll_median <- df1 %>%
+                mutate(median = pmap(df1,dt_roll_median)))
+  
+  pmap(df1,dt_roll_median)
+  
+  452699/100*30
+  135809/60/60/24
+  
+  
+  
+  # DATA.TABLE attempt
+  
+  dt_roll_median <- function(dates,suburbs,property) {
+    filter <- med_data_dt[suburb_name == suburbs &
+                         property_type == property &
+                         contract_date <= dates &
+                         contract_date > (dates-months(6))]
+    median(filter[,purchase_price])
+  }
+  
+  med_data_dt <- setDT(med_data)
+  
+  df_dt <- setDT(df)
+  
+  df_dt_1 <- df_dt[200000:200100]
+  
+  system.time(check <- pmap(df_dt_1,dt_roll_median))
+  
+  
+
+  # Can then easily apply the map function with mutate e.g.
+  df_roll_median <- df %>%
+    mutate(median = pmap(df,roll_median))
+  
   quarters <- sales_2 %>%
     distinct(quarter) %>%
     filter(quarter > as.Date("2015/01/01")) # this line is just for testing
@@ -260,14 +323,14 @@
     as.Date("2019-04-01"), "Abercrombie",  "House",
   )
     
-  roll_median <- function(date, suburb,property_type) {
+  roll_median <- function(quarter,suburb_name,property_type) {
     median <- sales_2 %>%
       select(quarter,contract_date, suburb_name, purchase_price,property_type) %>% # will need to stick property type back in at some stage
-      filter(suburb_name == suburb) %>%
+      filter(suburb_name == suburb_name) %>%
       filter(property_type == property_type) %>%
-      filter(contract_date <= date & contract_date > date-months(6)) %>%
+      filter(contract_date <= quarter & contract_date > quarter-months(6)) %>%
       summarise(median = median(purchase_price,na.rm = TRUE))
-    as.integer(median)
+    as.double(median)
   }
 
   check <- params %>%
