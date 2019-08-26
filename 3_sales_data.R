@@ -252,6 +252,43 @@ no_of_cores = detectCores()
   
 # [9] ---- How to calculate a moving median ----  
   
+  ## Another way is to create a massive dataset and then subset - this works and is probably the most effecient..
+  
+  df_1 <- med_data %>%
+    mutate(current_quarter = quarter)
+  
+  df_2 <- med_data %>%
+    mutate(current_quarter = quarter - months(3))
+  
+  df_3 <- med_data %>%
+    mutate(current_quarter = quarter - months(6))
+  
+  df_big <- bind_rows(df_1,df_2,df_3)
+  
+  
+  small_df <- df_big %>%
+    filter(str_detect(suburb_name, "^A"))
+  
+  system.time(check <- small_df %>%
+    group_by(current_quarter,suburb_name,property_type) %>%
+    summarise(median = median(purchase_price),
+              n = n()))
+  
+  check2 <- check %>%
+    filter(suburb_name == "Abbotsford (NSW)") %>%
+    filter(property_type == "House")
+  
+  ggplot(check, aes(x = current_quarter, y = median)) +
+    geom_point()
+  
+  check3 <- med_data %>%
+    filter(suburb_name == "Abbotsford (NSW)") %>%
+    filter(property_type == "House") %>%
+    filter(contract_date <= as.Date("2019-04-01") & 
+             contract_date > as.Date("2018-07-01")) %>%
+    summarise(median = median(purchase_price))
+  
+  
   # Get the distinct calculation dataframe
   df <- sales_2 %>%
     distinct(quarter,suburb_name,property_type) %>%
