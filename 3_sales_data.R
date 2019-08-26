@@ -19,6 +19,11 @@
   library(ggplot2)
   library(forcats)
   library(data.table)
+  library(furrr)
+  library(rbenchmark)
+  library(parallel)
+
+no_of_cores = detectCores()
 
 # [1] ---- Load Data ----
   
@@ -250,36 +255,71 @@
   # Get the distinct calculation dataframe
   df <- sales_2 %>%
     distinct(quarter,suburb_name,property_type) %>%
-    select(dates = quarter, suburbs = suburb_name, property = property_type)
+    select(suburbs = suburb_name, property = property_type, end_date = quarter) %>%
+    mutate(start_date = end_date - months(6))
 
   #subset the data 
   med_data <- sales_2 %>%
     select(quarter,contract_date, suburb_name, purchase_price,property_type) 
   
+  # split the data?? 
+  split_df <- df %>%
+    split()
   
   # Build a function
-  roll_median <- function(dates,suburbs,property) {
+  roll_median <- function(suburbs,property,end_date,start_date) {
     median <- med_data %>%
       filter(suburb_name == suburbs & 
-               #property_type == property &
-               contract_date <= dates & contract_date > dates-months(6)) %>%
+               property_type == property &
+               contract_date <= end_date & contract_date > start_date) %>%
       summarise(median = median(purchase_price,na.rm = TRUE))
     as.integer(median)
   }
   
+  roll_subset <- function(suburbs,property,end_date,start_date) {
+    df <- med_data %>%
+      filter(suburb_name == suburbs & 
+               property_type == property &
+               contract_date <= end_date & contract_date > start_date)
+  }
+  
+
   # subset 
   
-  df1 <- df[200000:200010,]
+  df1 <- df[200000:200050,]
   
   system.time(df_roll_median <- df1 %>%
-                mutate(median = pmap(df1,dt_roll_median)))
+                mutate(median = pmap(df1,roll_median)))
   
-  pmap(df1,dt_roll_median)
+  system.time(df_roll_groups <- df1 %>%
+                mutate(median = pmap(df1,roll_subset)))
+  
+  pmap(df1,roll_median)
   
   452699/100*30
   135809/60/60/24
   
+  ?split
   
+  
+  ##### Try with Furrr ######
+  
+  future::plan(multiprocess)
+  
+  system.time(map_dbl(1:4, function(x){
+    Sys.sleep(1)
+    x^2
+  }))
+  
+  system.time(future_map_dbl(1:4, function(x){
+    Sys.sleep(1)
+    x^2
+  }))
+  
+  system.time(df_roll_median_future <- df1 %>%
+                mutate(median = future_pmap(df1,roll_median)))
+  
+  future_pmap(df1,roll_median,.progress = TRUE)
   
   # DATA.TABLE attempt
   
@@ -291,15 +331,22 @@
     median(filter[,purchase_price])
   }
   
+  dt_roll_subset <- function(suburbs,property,end_date,start_date) {
+    med_data_dt[suburb_name == suburbs &
+                            property_type == property &
+                            contract_date <= end_date &
+                            contract_date > start_date]
+  }
+  
   med_data_dt <- setDT(med_data)
   
   df_dt <- setDT(df)
   
-  df_dt_1 <- df_dt[200000:200100]
+  df_dt_1 <- df_dt[200000:200050]
   
   system.time(check <- pmap(df_dt_1,dt_roll_median))
   
-  
+  system.time(check <- pmap(df_dt_1,dt_roll_subset))
 
   # Can then easily apply the map function with mutate e.g.
   df_roll_median <- df %>%
