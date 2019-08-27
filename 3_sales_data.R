@@ -23,8 +23,6 @@
   library(rbenchmark)
   library(parallel)
 
-no_of_cores = detectCores()
-
 # [1] ---- Load Data ----
   
   # Get file path to each file
@@ -240,39 +238,73 @@ no_of_cores = detectCores()
                                                           primary_purpose %in% c("ACREAGE")) ~ "Land",
                                                      TRUE ~ property_type)))
   sales_1 <- sales %>%
-    filter(purchase_price > 0) %>%
+    filter(purchase_price > 1000) %>%
     filter(contract_date > as.Date("1990/01/01") & contract_date < as.Date("2019/07/01")) %>% 
     filter(!(area == "(Missing)" & zone_code == "(Missing)" & zoning == "(Missing)" & is.na(primary_purpose))) %>%
     distinct() 
   
   sales_2 <- sales_1 %>%
     mutate(year = floor_date(contract_date,"year"),
-           quarter = floor_date(contract_date,"quarter"),
+           quarter = ceiling_date(contract_date,"quarter"),
            month = floor_date(contract_date,"month"))
   
-# [9] ---- How to calculate a moving median ----  
+  sales_3 <- sales_2 %>% # need to remove non-residential properties
+    group_by(primary_purpose) %>%
+    summarise(n = n()) %>%
+    filter(n>20)
+  
+  sales_4 <- sales_2 %>%
+    filter(str_detect(primary_purpose,"OFFICE") |
+                   str_detect(primary_purpose,"COMMERCIAL") |
+                   str_detect(primary_purpose,"INDUSTRIAL") |
+                   str_detect(primary_purpose,"FACTORY") |
+                   str_detect(primary_purpose,"HOSPITAL") |
+                   str_detect(primary_purpose,"MINE") |
+                   str_detect(primary_purpose,"RESORT"))
+  
+  sales_5 <- sales_2 %>%
+    filter(nature_of_property == "Other") %>%
+    group_by(primary_purpose) %>%
+    summarise(n = n())
+  
+  filter_out <- sales_2 %>%
+    filter(nature_of_property == "Other") %>%
+    filter(str_detect(primary_purpose,"RESIDENTIAL")|
+             str_detect(primary_purpose,"HOUSE"))
+  
+  ## Need to add more examples and then take them away with a ! and then anti_join with sales_2 to get rid of these non residential properties
+  
+  table(sales_5$nature_of_property)
+  table(sales_5$zone_description)
+    
+  
+# [9] ---- Calculate a rolling median ----  
   
   ## Another way is to create a massive dataset and then subset - this works and is probably the most effecient..
+  sales_subset <- sales_2 %>%
+    select(quarter,contract_date, suburb_name, purchase_price,property_type) 
   
-  df_1 <- med_data %>%
-    mutate(current_quarter = quarter)
+  df_1 <- sales_subset %>%
+    mutate(target_date_window = quarter)
   
-  df_2 <- med_data %>%
-    mutate(current_quarter = quarter - months(3))
+  df_2 <- sales_subset %>%
+    mutate(target_date_window = quarter + months(3))
   
-  df_3 <- med_data %>%
-    mutate(current_quarter = quarter - months(6))
+  df_3 <- sales_subset %>%
+    mutate(target_date_window = quarter + months(6))
   
   df_big <- bind_rows(df_1,df_2,df_3)
-  
   
   small_df <- df_big %>%
     filter(str_detect(suburb_name, "^A"))
   
   system.time(check <- small_df %>%
-    group_by(current_quarter,suburb_name,property_type) %>%
+    group_by(target_date_window,suburb_name,property_type) %>%
     summarise(median = median(purchase_price),
               n = n()))
+  
+  
+  
   
   check2 <- check %>%
     filter(suburb_name == "Abbotsford (NSW)") %>%
