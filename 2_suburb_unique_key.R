@@ -70,3 +70,68 @@
   
   write_rds(suburbs,path = "data/created/suburbs.rds")
 
+# [4] ---- Working on matching data using shapefile crossover ----
+  
+  # NSW Aug 2019
+  
+  NSW <- read_sf("data/shapefiles/2019")
+  
+  NSW_layer <- read_sf("data/shapefiles/2019", layer = "nsw_locality_shp")
+  
+  NSW_data <- NSW %>%
+    st_drop_geometry() %>%
+    left_join(NSW_layer, by = "LOC_PID")
+  
+  nsw_2019 <- NSW %>%
+    left_join(NSW_layer, by = "LOC_PID") %>%
+    select(LC_PLY_PID,LOC_PID,DT_CREATE = DT_CREATE.x, DT_RETIRE = DT_RETIRE.x,NAME,POSTCODE = PRIM_PCODE)
+
+  # NSW 2016
+  nsw_2016 <- read_sf("data/shapefiles/2016") %>%
+    filter(STE_CODE16 == 1)
+  
+  nsw_2016_data <- nsw_2016 %>%
+    st_drop_geometry()
+  
+  missing <- suburbs %>%
+    filter(str_detect(suburb_name,"missing")) %>%
+    #filter(sales_post_code != 0) %>%
+    #filter(!is.na(sales_post_code)) %>%
+    select(sales_locality, sales_post_code) %>%
+    distinct()
+  
+  # Matching missing suburbs to 2019 data
+  
+  nsw_2019_missing <- nsw_2019 %>%
+    semi_join(missing, by = c("NAME" = "sales_locality"))
+  
+  not_in_2019 <- missing %>%
+    anti_join(nsw_2019, by = c("sales_locality" = "NAME"))
+  
+  # Try calculating larges overlap with dplyr
+  intersection_missing <- nsw_2019_missing %>%
+    st_intersection(nsw_2016) %>%
+    mutate(area = st_area(geometry)) %>%
+    select(LOC_PID,NAME,POSTCODE,SSC_CODE16,SSC_NAME16,area) %>%
+    st_drop_geometry()
+  
+  # How to get the maximum
+  
+  highest <- intersection_missing %>%
+    mutate(POSTCODE = case_when(is.na(POSTCODE) ~ "None",
+                                TRUE ~ POSTCODE)) %>%
+    group_by(NAME,POSTCODE) %>%
+    mutate(rank = rank(desc(area))) %>%
+    filter(rank == 1)
+  
+  # Where are these locations?
+  
+  sites <- data.frame(longitude = c(145.420963,152.359903,148.803446), latitude = c(-34.440034,-32.262242,-35.805497), names = c("Currathool","Bachelor","Yauok"))
+  
+  sites1 <- st_as_sf(sites, coords = c("longitude", "latitude"), crs = 4283, agr = "constant")
+
+  nsw_2016_locations <- nsw_2016 %>%
+    st_join(sites1,join = st_intersects, left = FALSE)
+  
+  ##### Trash ####
+

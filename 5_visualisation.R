@@ -54,14 +54,20 @@
            crime_score_log = log(crime_score))
   
   mypalette<-brewer.pal(11,"RdYlGn")
+  mypalette<-terrain.colors(13)
+  
+  greenpalette = colorRampPalette(c('darkred','yellow','darkgreen'))
+  
+  ?colorRampPalette
   
   sydney_green_score <- nsw_green_score %>%
     semi_join(sydney_only, by = c("SSC_NAME16" = "suburb_name"))
   
-  mapview(sydney_green_score, zcol="green_score_decile",col.regions = mypalette, popup = popupTable(sydney_green_score,zcol = c(2,8,9)))
+  mapview(sydney_green_score, zcol="green_score_decile", col.regions = greenpalette,popup = popupTable(sydney_green_score,zcol = c(2,8,9)))
   
   mapview(sydney_crime_score_total, zcol="crime_score_log", popup = leafpop::popupTable(sydney_crime_score_total))
   
+  ?mapview
   
   ?popupTable
   united <- nsw %>%

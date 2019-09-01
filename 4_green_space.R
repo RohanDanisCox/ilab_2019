@@ -25,9 +25,9 @@
     mutate_if(is.numeric , replace_na, replace = 0)
 
   suburb_green_ratio <- suburb_no_na %>%
-    mutate(suburb_green_ratio = round(Parkland_area_sqkm/ (Residential_area_sqkm + Commercial_area_sqkm + Industrial_area_sqkm + Other_area_sqkm),4)) %>%
-    mutate(suburb_green_ratio = case_when(is.infinite(suburb_green_ratio) ~ 1400,
-                                          TRUE ~ suburb_green_ratio)) %>%
+    mutate(suburb_green_ratio = round(Parkland_area_sqkm/ (Residential_area_sqkm + Commercial_area_sqkm + Industrial_area_sqkm + Other_area_sqkm+1),4)) %>% #put in a constant term to see what would happen
+    #mutate(suburb_green_ratio = case_when(is.infinite(suburb_green_ratio) ~ 1400,
+                                          #TRUE ~ suburb_green_ratio)) %>%
     select(suburb_code,suburb_green_ratio)
   
   check <- suburb_green_ratio %>%
@@ -40,17 +40,23 @@
               Commercial_area_sqkm = sum(Commercial_area_sqkm),
               Industrial_area_sqkm = sum(Industrial_area_sqkm),
               Other_area_sqkm = sum(Other_area_sqkm)) %>%
-    mutate(sa2_green_ratio = round(Parkland_area_sqkm/ (Residential_area_sqkm + Commercial_area_sqkm + Industrial_area_sqkm + Other_area_sqkm),4)) %>%
-    mutate(sa2_green_ratio = case_when(is.infinite(sa2_green_ratio) ~ 800,
-                                          TRUE ~ sa2_green_ratio)) %>%
+    mutate(sa2_green_ratio = round(Parkland_area_sqkm/ (Residential_area_sqkm + Commercial_area_sqkm + Industrial_area_sqkm + Other_area_sqkm+1),4)) %>% # put in a constant term to see what would happen
+    #mutate(sa2_green_ratio = case_when(is.infinite(sa2_green_ratio) ~ 800,
+                                          #TRUE ~ sa2_green_ratio)) %>%
     select(sa2_maincode,sa2_green_ratio)
 
   green_score <- suburb_no_na %>%
     left_join(suburb_green_ratio, by = "suburb_code") %>%
     left_join(sa2_green_ratio, by = "sa2_maincode") %>%
-    mutate(green_score = (0.5*suburb_green_ratio) + (0.5*sa2_green_ratio),
+    mutate(green_score = 100*((0.5*suburb_green_ratio) + (0.5*sa2_green_ratio)),
+           log_green_score = case_when(green_score < 1 ~ green_score,
+                                       green_score >= 1 ~ log(green_score)),
            green_score_decile = ntile(green_score,10)) %>%
-    select(suburb_code,suburb_name,green_score,green_score_decile)
+    select(suburb_code,suburb_name,green_score,log_green_score, green_score_decile)
+  
+  # Visualise distribution
+  ggplot(green_score,aes(x = log_green_score)) + 
+    geom_density()
 
 # [3] ---- Save off Greenscore ----
   
