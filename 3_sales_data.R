@@ -239,6 +239,7 @@
                                                      TRUE ~ property_type)))
   sales_1 <- sales %>%
     filter(purchase_price > 1000) %>%
+    filter(!(is.na(house_number) & is.na(property_id))) %>%
     filter(contract_date > as.Date("1990/01/01") & contract_date < as.Date("2019/07/01")) %>% 
     filter(!(area == "(Missing)" & zone_code == "(Missing)" & zoning == "(Missing)" & is.na(primary_purpose))) %>%
     distinct() 
@@ -248,10 +249,90 @@
            quarter = ceiling_date(contract_date,"quarter"),
            month = floor_date(contract_date,"month"))
   
-  sales_3 <- sales_2 %>% # need to remove non-residential properties
-    group_by(primary_purpose) %>%
+  filter_out <- sales_2 %>%
+    filter(nature_of_property == "Other") %>%
+    filter(!str_detect(primary_purpose,"RESIDENTIAL")&
+             !str_detect(primary_purpose,"HOUSE") &
+             !str_detect(primary_purpose,"FARM") &
+             !str_detect(primary_purpose,"HOME") &
+             !str_detect(primary_purpose,"RURAL") & 
+             !str_detect(primary_purpose,"FLAT") &
+             !str_detect(primary_purpose,"UNIT") & 
+             !str_detect(primary_purpose,"VILLA") &
+             !str_detect(primary_purpose,"RESIDENCE") &
+             !str_detect(primary_purpose,"APARTMENT") &
+             !str_detect(primary_purpose,"RENTAL") &
+             !str_detect(primary_purpose,"GRAZING") &
+             !str_detect(primary_purpose,"DWELLING") &
+             !str_detect(primary_purpose,"COTTAGE")) 
+  
+  sales_3 <- sales_2 %>% 
+    anti_join(filter_out) 
+  
+  sales_4 <- sales_3 %>%
+    filter(!(is.na(primary_purpose) & str_detect(zone_description,"Industrial"))) %>%
+    filter(!(is.na(primary_purpose) & str_detect(zone_description,"Business"))) %>%
+    filter(!(is.na(primary_purpose) & str_detect(zone_description,"Commercial")))
+  
+  sales_5 <- sales_4 %>%
+    group_by(unit_number,house_number,street_name,suburb_name,contract_date,purchase_price) %>%
+    mutate(packaged_sale_n = n()) %>%
+    ungroup()
+  
+  
+  
+  ,packaged_sale = case_when(packaged_sale_n >1 ~ "Yes",
+                                                           TRUE ~ "No")) %>%
+    ungroup()
+  rm(sales_5)
+  
+  sales_5 <- sales_4 %>%
+    group_by(property_id,contract_date,purchase_price) %>%
+    summarise(packaged_sale_n = n()) %>%
+    ungroup()
+              
+              
+              packaged_sale = case_when(packaged_sale_n >1 ~ "Yes",
+                                                           TRUE ~ "No")) %>%
+    ungroup()
+  
+  sales_5 <- matched_sales %>%
+    filter(is.na(house_number))
+  
+  table(sales_5$zone_description,sales_5$property_type)
+  
+  packaged_sale <- sales_4 %>%
+    group_by(unit_number,house_number,street_name,suburb_name,contract_date,purchase_price) %>%
     summarise(n = n()) %>%
-    filter(n>20)
+    ungroup() %>%
+    filter(n >2) 
+  
+  packaged_sale_2 <- packaged_sale %>%
+    filter(purchase_price > 1000000 & 
+             n > 3)
+  
+  check <- sales_4 %>%
+    filter(house_number == 4, street_name == "KINGSWAY")
+  
+  sales_5 <- sales_4 %>%
+    filter(str_detect(zone_description,"Commercial"))
+  
+  check <- sales_4 %>%
+    group_by(zone_description) %>%
+    summarise(n = n()) 
+
+  
+  sales_3 <- sales_2 %>% # need to remove non-residential properties
+    anti_join(filter_out) 
+  
+  sales_4 <- sales_3 %>%
+    filter(str_detect(primary_purpose,"WAREHOUSE") & str_detect(zone_description,"Residential"))  |
+             str_detect(primary_purpose,"COMMERCIAL") |
+             str_detect(primary_purpose,"INDUSTRIAL") |
+             str_detect(primary_purpose,"FACTORY") |
+             str_detect(primary_purpose,"HOSPITAL") |
+             str_detect(primary_purpose,"MINE") |
+             str_detect(primary_purpose,"RESORT"))
   
   sales_4 <- sales_2 %>%
     filter(str_detect(primary_purpose,"OFFICE") |
@@ -270,7 +351,21 @@
   filter_out <- sales_2 %>%
     filter(nature_of_property == "Other") %>%
     filter(str_detect(primary_purpose,"RESIDENTIAL")|
-             str_detect(primary_purpose,"HOUSE"))
+             str_detect(primary_purpose,"HOUSE") |
+             str_detect(primary_purpose,"FARM") |
+             str_detect(primary_purpose,"HOME") | 
+             str_detect(primary_purpose,"RURAL") | 
+             str_detect(primary_purpose,"FLAT")|
+             str_detect(primary_purpose,"UNIT") | 
+             str_detect(primary_purpose,"VILLA") |
+             str_detect(primary_purpose,"RESIDENCE")|
+             str_detect(primary_purpose,"APARTMENT")|
+             str_detect(primary_purpose,"RENTAL")| 
+             str_detect(primary_purpose,"GRAZING")|
+             str_detect(primary_purpose,"DWELLING")|
+             str_detect(primary_purpose,"COTTAGE")) %>%
+    group_by(primary_purpose) %>%
+    summarise(n = n())
   
   ## Need to add more examples and then take them away with a ! and then anti_join with sales_2 to get rid of these non residential properties
   
