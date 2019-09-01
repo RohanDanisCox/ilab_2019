@@ -187,23 +187,14 @@
   matched_land_value <- readRDS("data/land_value/matched_land_value.rds")
   matched_sales <- readRDS("data/sales/matched_sales.rds")
   
-  matched_sales_1 <- matched_sales %>%
-    group_by(suburb_code,suburb_name) %>%
-    summarise(n = n(),
-              average = mean(purchase_price,na.rm = TRUE),
-              median = median(purchase_price,na.rm = TRUE))
-  
-  matched_land_value_1 <- matched_land_value %>%
-    group_by(suburb_code,suburb_name) %>%
-    summarise(n = n(),
-              average_2018 = mean(land_value_2018, na.rm = TRUE),
-              median = median(land_value_2018,na.rm = TRUE))
-  
 # [8] ---- What are the useful variables? ---- 
   
   matched_sales_bio <- matched_sales %>% map_df(~(data.frame(n_distinct = n_distinct(.x),
-                                                             class = class(.x))),
+                                                             class = class(.x),
+                                                             na_count = sum(is.na(.x)))),
                                                 .id = "variable")
+  
+# [9] ---- Filter Sales down to only those that are useful ----   
   
   sales <- matched_sales %>%
     select(-c(record_type,download_date,source,sale_counter,property_name,dimensions,land_description,
@@ -236,7 +227,9 @@
                                                           str_detect(primary_purpose,"LAND") | 
                                                           str_detect(primary_purpose,"RURAL") |
                                                           primary_purpose %in% c("ACREAGE")) ~ "Land",
-                                                     TRUE ~ property_type)))
+                                                     TRUE ~ property_type))) %>%
+    select(-area_type)
+  
   sales_1 <- sales %>%
     filter(purchase_price > 1000) %>%
     filter(!(is.na(house_number) & is.na(property_id))) %>%
@@ -279,104 +272,47 @@
     mutate(packaged_sale_n = n()) %>%
     ungroup()
   
+  sales_6 <- sales_5 %>%
+    mutate(packaged_sale = case_when(packaged_sale_n >1 ~ "Yes",
+                                     TRUE ~ "No"))
   
+  sales_7 <- sales_6 %>%
+    mutate(new_price = case_when(purchase_price > 2000000 & packaged_sale == "Yes" ~ purchase_price/packaged_sale_n,
+                                      TRUE ~ NA_real_)) 
   
-  ,packaged_sale = case_when(packaged_sale_n >1 ~ "Yes",
-                                                           TRUE ~ "No")) %>%
-    ungroup()
-  rm(sales_5)
+  sales_8 <- sales_7 %>%
+    filter(!(packaged_sale == "Yes" & property_type %in% c("House","Apartment") & new_price > 5000000)) 
   
-  sales_5 <- sales_4 %>%
-    group_by(property_id,contract_date,purchase_price) %>%
-    summarise(packaged_sale_n = n()) %>%
-    ungroup()
-              
-              
-              packaged_sale = case_when(packaged_sale_n >1 ~ "Yes",
-                                                           TRUE ~ "No")) %>%
-    ungroup()
+  sales_9 <- sales_8 %>%
+    mutate(purchase_price = case_when(is.na(new_price)~purchase_price,
+                                      TRUE ~ new_price)) %>%
+    select(-new_price)
   
-  sales_5 <- matched_sales %>%
-    filter(is.na(house_number))
+  cleaned_sales <- sales_9 %>%
+    filter(!(contract_date < as.Date("2002-01-01") &
+              purchase_price > 25000000 & 
+              property_type %in% c("House","Apartment"))) %>%
+    filter(!(contract_date >= as.Date("2002-01-01") &
+             purchase_price > 100000000 & 
+             property_type %in% c("House","Apartment"))) %>%
+    filter(!(is.na(suburb_code)))
   
-  table(sales_5$zone_description,sales_5$property_type)
-  
-  packaged_sale <- sales_4 %>%
-    group_by(unit_number,house_number,street_name,suburb_name,contract_date,purchase_price) %>%
-    summarise(n = n()) %>%
-    ungroup() %>%
-    filter(n >2) 
-  
-  packaged_sale_2 <- packaged_sale %>%
-    filter(purchase_price > 1000000 & 
-             n > 3)
-  
-  check <- sales_4 %>%
-    filter(house_number == 4, street_name == "KINGSWAY")
-  
-  sales_5 <- sales_4 %>%
-    filter(str_detect(zone_description,"Commercial"))
-  
-  check <- sales_4 %>%
-    group_by(zone_description) %>%
-    summarise(n = n()) 
+  cleaned_sales_bio <- cleaned_sales %>% map_df(~(data.frame(n_distinct = n_distinct(.x),
+                                                             class = class(.x),
+                                                             na_count = sum(is.na(.x)))),
+                                                .id = "variable")
 
+  saveRDS(cleaned_sales,"data/created/cleaned_sales.rds")
   
-  sales_3 <- sales_2 %>% # need to remove non-residential properties
-    anti_join(filter_out) 
+# [10] ---- Start here with cleaned sales ---- 
   
-  sales_4 <- sales_3 %>%
-    filter(str_detect(primary_purpose,"WAREHOUSE") & str_detect(zone_description,"Residential"))  |
-             str_detect(primary_purpose,"COMMERCIAL") |
-             str_detect(primary_purpose,"INDUSTRIAL") |
-             str_detect(primary_purpose,"FACTORY") |
-             str_detect(primary_purpose,"HOSPITAL") |
-             str_detect(primary_purpose,"MINE") |
-             str_detect(primary_purpose,"RESORT"))
+  cleaned_sales <- readRDS("data/created/cleaned_sales.rds")
   
-  sales_4 <- sales_2 %>%
-    filter(str_detect(primary_purpose,"OFFICE") |
-                   str_detect(primary_purpose,"COMMERCIAL") |
-                   str_detect(primary_purpose,"INDUSTRIAL") |
-                   str_detect(primary_purpose,"FACTORY") |
-                   str_detect(primary_purpose,"HOSPITAL") |
-                   str_detect(primary_purpose,"MINE") |
-                   str_detect(primary_purpose,"RESORT"))
+ 
+# [11] ---- Calculate a rolling median ----  
   
-  sales_5 <- sales_2 %>%
-    filter(nature_of_property == "Other") %>%
-    group_by(primary_purpose) %>%
-    summarise(n = n())
-  
-  filter_out <- sales_2 %>%
-    filter(nature_of_property == "Other") %>%
-    filter(str_detect(primary_purpose,"RESIDENTIAL")|
-             str_detect(primary_purpose,"HOUSE") |
-             str_detect(primary_purpose,"FARM") |
-             str_detect(primary_purpose,"HOME") | 
-             str_detect(primary_purpose,"RURAL") | 
-             str_detect(primary_purpose,"FLAT")|
-             str_detect(primary_purpose,"UNIT") | 
-             str_detect(primary_purpose,"VILLA") |
-             str_detect(primary_purpose,"RESIDENCE")|
-             str_detect(primary_purpose,"APARTMENT")|
-             str_detect(primary_purpose,"RENTAL")| 
-             str_detect(primary_purpose,"GRAZING")|
-             str_detect(primary_purpose,"DWELLING")|
-             str_detect(primary_purpose,"COTTAGE")) %>%
-    group_by(primary_purpose) %>%
-    summarise(n = n())
-  
-  ## Need to add more examples and then take them away with a ! and then anti_join with sales_2 to get rid of these non residential properties
-  
-  table(sales_5$nature_of_property)
-  table(sales_5$zone_description)
-    
-  
-# [9] ---- Calculate a rolling median ----  
-  
-  ## Another way is to create a massive dataset and then subset - this works and is probably the most effecient..
-  sales_subset <- sales_2 %>%
+# [11a] ---- Method 2 - duplicate the dataset across time windows and then group_by time window when calculating median ----
+  sales_subset <- cleaned_sales %>%
     select(quarter,contract_date, suburb_name, purchase_price,property_type) 
   
   df_1 <- sales_subset %>%
@@ -398,9 +334,6 @@
     summarise(median = median(purchase_price),
               n = n()))
   
-  
-  
-  
   check2 <- check %>%
     filter(suburb_name == "Abbotsford (NSW)") %>%
     filter(property_type == "House")
@@ -416,23 +349,19 @@
     summarise(median = median(purchase_price))
   
   
-  # Get the distinct calculation dataframe
-  df <- sales_2 %>%
+  # [11b] ---- Method 1 - Create a subsetting function and iterate through using purrr ----
+  df <- cleaned_sales %>%
     distinct(quarter,suburb_name,property_type) %>%
     select(suburbs = suburb_name, property = property_type, end_date = quarter) %>%
     mutate(start_date = end_date - months(6))
 
   #subset the data 
-  med_data <- sales_2 %>%
+  method1 <- cleaned_sales %>%
     select(quarter,contract_date, suburb_name, purchase_price,property_type) 
-  
-  # split the data?? 
-  split_df <- df %>%
-    split()
-  
+
   # Build a function
   roll_median <- function(suburbs,property,end_date,start_date) {
-    median <- med_data %>%
+    median <- method1 %>%
       filter(suburb_name == suburbs & 
                property_type == property &
                contract_date <= end_date & contract_date > start_date) %>%
@@ -440,15 +369,7 @@
     as.integer(median)
   }
   
-  roll_subset <- function(suburbs,property,end_date,start_date) {
-    df <- med_data %>%
-      filter(suburb_name == suburbs & 
-               property_type == property &
-               contract_date <= end_date & contract_date > start_date)
-  }
-  
-
-  # subset 
+  # Try on subset 
   
   df1 <- df[200000:200050,]
   
@@ -459,12 +380,6 @@
                 mutate(median = pmap(df1,roll_subset)))
   
   pmap(df1,roll_median)
-  
-  452699/100*30
-  135809/60/60/24
-  
-  ?split
-  
   
   ##### Try with Furrr ######
   
@@ -485,7 +400,7 @@
   
   future_pmap(df1,roll_median,.progress = TRUE)
   
-  # DATA.TABLE attempt
+  #### Try with DATA.TABLE ####
   
   dt_roll_median <- function(dates,suburbs,property) {
     filter <- med_data_dt[suburb_name == suburbs &
@@ -512,172 +427,17 @@
   
   system.time(check <- pmap(df_dt_1,dt_roll_subset))
 
-  # Can then easily apply the map function with mutate e.g.
-  df_roll_median <- df %>%
-    mutate(median = pmap(df,roll_median))
-  
-  quarters <- sales_2 %>%
-    distinct(quarter) %>%
-    filter(quarter > as.Date("2015/01/01")) # this line is just for testing
-  
-  suburbs <- sales_2 %>%
-    distinct(suburb_name) %>%
-    filter(suburb_name < "B") # this line is just for testing
-  
-  property_type <- sales_2 %>%
-    distinct(property_type)
-  
-  params <- tibble::tribble(
-    ~ date, ~ suburb, ~ property_type,
-    as.Date("2018-10-01"), "Haberfield", "House",
-    as.Date("2019-01-01"), "Armidale", "House",
-    as.Date("2019-04-01"), "Abercrombie",  "House",
-  )
-    
-  roll_median <- function(quarter,suburb_name,property_type) {
-    median <- sales_2 %>%
-      select(quarter,contract_date, suburb_name, purchase_price,property_type) %>% # will need to stick property type back in at some stage
-      filter(suburb_name == suburb_name) %>%
-      filter(property_type == property_type) %>%
-      filter(contract_date <= quarter & contract_date > quarter-months(6)) %>%
-      summarise(median = median(purchase_price,na.rm = TRUE))
-    as.double(median)
-  }
-
-  check <- params %>%
-    mutate(median = pmap_dbl(params,roll_median))
-
-  
-# [8] ---- Dwelling density ---- 
+# [12] ---- Dwelling density ---- 
   
   # This would definitely be more accurate to get from Census data
   dwellings_per_suburb <- matched_land_value %>%
     group_by(suburb_code,suburb_name) %>%
     summarise(total_dwellings = n()) 
   
-# [8] ---- Relative Turnover per year ---- 
+# [13] ---- Relative Turnover per year ---- 
   
-  # probably want to create some grouping variables year, quarter, month etc
-  matched_sales_2 <- matched_sales %>%
-    mutate(year = floor_date(contract_date,"year"),
-           quarter = floor_date(contract_date,"quarter"),
-           month = floor_date(contract_date,"month"))
-  
-  # This would definitely be more accurate to get from Census data
-  sales_per_year <- matched_sales_2 %>%
-    group_by(year) %>%
-    summarise(sales = n()) %>%
-    filter(year >= 1989-01-01)
-  
-  # visualise distribution - something is definitely wrong in hurstville
-  ggplot(sales_per_year, aes(x = year, y=sales)) +
-    geom_line()
-
-  summary(matched_sales$contract_date)
-  summary(matched_sales$settlement_date)
-    
-  # Investigate hurstville 
-  
-  hurstville <- matched_sales_2 %>%
-    filter(suburb_name == "Hurstville")
-    
-  hurstville_1 <- hurstville
-    group_by(street_name, year) %>%
-    summarise(n = n())
-  
-  hurstville_2 <- hurstville %>%
-    filter(street_name %in% c("FOREST RD","PEARL ST")) %>%
-    group_by(house_number,street_name) %>%
-    summarise(n = n())
-  
-  hurstville_3 <- hurstville %>%
-    filter(street_name %in% c("FOREST RD","PEARL ST")) %>%
-    filter(house_number %in% c("1 B","458","460"))
-  
-  hurstville_4 <- hurstville_3 %>%
-    group_by(house_number,street_name,strata_lot_number) %>%
-    summarise(n = n())
-  
-  hurstville_5 <- hurstville_3 %>%
-    group+
-    
-  hurstville_land <- matched_land_value %>%
-    filter(suburb_name == "Hurstville") %>%
-    filter(street_name %in% c("FOREST RD","PEARL ST")) 
-  
-  hurstville_delete <- hurstville %>%
-    select(-sale_counter) %>%
-    distinct()
-    
-  overall_ignore_sales_counter <- matched_sales %>%
-    select(-sale_counter) %>%
-    distinct()
-  
-  matched_sales <- overall_ignore_sales_counter
-  
-  data %>% 
-    group_by(month=floor_date(date, "month")) %>%
-    summarize(summary_variable=sum(value))
-  
+  sales_per_year <- cleaned_sales %>%
+    group_by(year,suburb_name) %>%
+    summarise(sales = n())
   
 # TRASH
-  
-  
-  
-  sales_2 <- sales_1 %>%
-    filter(is.na(area)) %>%
-    filter(property_type == "House") %>%
-    filter(zone_code == "(Missing)") %>%
-    count(year)
-  
-  
-  
-  table(sales$property_type,sales$zone_code)
-  table(sales$primary_purpose)
-  
-  summary <- sales %>%
-    group_by(primary_purpose) %>%
-    summarise(n = n()) %>%
-    filter(n >50)
-  
-  
-  sales %>%
-    filter(primary_purpose == "APARTMENT") %>%
-    count(property_type)
-  summarise(property_type)
-  
-  sales %>% 
-    filter(str_detect(primary_purpose,"RURAL")) %>%
-    count(primary_purpose) %>%
-    arrange(desc(n))
-  
-  check <- sales %>%
-    filter(area > 1000000) %>%
-    filter(purchase_price < 100000)
-  
-  
-  
-  table(sales$property_type)
-  
-  test <- sales %>%
-    filter(unit_flag == "Apartment" & property_type == "House")
-  
-  test2 <- sales %>%
-    filter(unit_flag == "House" & property_type == "Apartment")
-  summary(sales)
-  
-  select(distict_code, valuation_number,property_id,unit_number,house_number,street_name,locality,
-         post_code,area,area_type,
-         
-         
-         
-         # Nature of property
-         
-         summary(matched_land_value)
-         glimpse(matched_sales)
-         summary(matched_sales)
-         summary(sales)
-         
-         table(matched_sales$zoning)
-        
-  
