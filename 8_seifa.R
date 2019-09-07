@@ -58,7 +58,9 @@
   
   seifa_2016 <- seifa_2016_raw %>%
     bind_rows(seifa_2016_excluded) %>%
-    arrange(suburb_code)
+    arrange(suburb_code) %>%
+    mutate(year = 2016) %>%
+    select(1,2,9,3,4,5,6,7)
  
 # [2] ---- Load and transform the SEIFA data for 2011 ----
    
@@ -105,7 +107,7 @@
     bind_rows(seifa_2011_excluded) %>%
     arrange(suburb_code_2011)
 
-# [2] ---- Load and transform the SEIFA data for 2006 ----
+# [3] ---- Load and transform the SEIFA data for 2006 ----
   
   seifa_2006_suburb_names <- read_xlsx("data/seifa/2006 ssc.xlsx", sheet = 6, skip = 6,
                                        col_names = c("1","2","3","4","5","6","7","8","9","10",
@@ -146,33 +148,32 @@
            education_and_occupation_index = NA_integer_) %>%
     select(-c(4,5,6))
   
-  seifa_2006 <- seifa_2006_raw %>%
+  seifa_2006_unmatched <- seifa_2006_raw %>%
     bind_rows(seifa_2006_excluded) %>%
     arrange(suburb_code_2006)
   
-# [3] ---- Matching 2006 to 2011 ----
+# [4] ---- Load and transform the SEIFA data for 2001 ---- 
   
-  suburb_names_2011 <- seifa_2011_unmatched %>%
-    select(1:2) %>%
-    mutate(suburb_name_2006 = str_replace(suburb_name_2011," \\(NSW\\)","")) %>%
-    mutate(suburb_name_2006 = str_replace(suburb_name_2006," - NSW",""))
+  seifa_2001_raw <- read_xlsx("data/seifa/2001 ssc.xlsx", sheet = 1,
+                              col_names = TRUE) %>%
+    mutate(suburb_code_2001 = as.character(Suburb_Code), 
+           suburb_name_2006 = Suburb_Name,
+           usual_resident_population = as.numeric(SEIFA_2001_Population),
+           relative_socio_economic_disadvantage_index = as.numeric(Disadvantage),
+           relative_socio_economic_adv_disadv_index = as.numeric(Advantage_Disadvantage),
+           economic_resources_index = as.numeric(Econ_Resource),
+           education_and_occupation_index = as.numeric(Educ_Occupation)) %>%
+    select(46,47,48,49,50,51,52) %>%
+    filter(suburb_code_2001 < 20000)
   
-  suburb_names_2006 <- seifa_2006 %>%
-    select(1:2)
+  seifa_2006_suburb_names1 <- seifa_2006_suburb_names %>%
+    filter(suburb_code_2006 < 20000)
   
-  write_csv(suburb_names_2011,"data/created/suburb_names_2011.csv")
-  write_csv(suburb_names_2006,"data/created/suburb_names_2006.csv")
+  seifa_2001_unmatched <- seifa_2001_raw %>%
+    left_join(seifa_2006_suburb_names1, by = "suburb_name_2006") %>%
+    filter(!is.na(suburb_code_2006)) 
   
-  drop_upload("data/created/suburb_names_2011.csv","ilab2019/")
-  drop_upload("data/created/suburb_names_2006.csv","ilab2019/")
-  
-  not_matched_11 <- suburb_names_2011 %>%
-    anti_join(suburb_names_2006, by = "suburb_name_2006")
-  
-  not_matched_06 <- suburb_names_2006 %>%
-    anti_join(suburb_names_2011, by = "suburb_name_2006")
-  
-# [4] ---- Matching 2011 to 2016 ----
+# [5] ---- Matching 2011 to 2016 ----
   
   mapping_2011_2016_raw <- read_xls("data/suburb_comparison/cg_ssc_2011_ssc_2016.xls", sheet = 4, skip = 7,
                                     col_names = c("suburb_code_2011",
@@ -189,13 +190,61 @@
     filter(rank == 1) %>%
     ungroup()
   
-  
   seifa_2011 <- seifa_2011_unmatched %>%
-    left_join(mapping_2011_2016, by = c("suburb_code_2011","suburb_name_2011"))
+    left_join(mapping_2011_2016, by = c("suburb_code_2011","suburb_name_2011")) %>%
+    mutate(year = 2011) %>%
+    select(suburb_code = 8, suburb_name = 9,13,3,4,5,6,7)
   
+# [6] ---- Matching 2006 to 2016 ----
   
-# [4] ---- Save off crime score ----
+  mapping_2006_2016_raw <- read_xlsx("data/suburb_comparison/cg_ssc_2006_ssc_2016.xlsx", sheet = 4, skip = 7,
+                                     col_names = c("suburb_code_2006",
+                                                   "suburb_name_2006",
+                                                   "suburb_code_2016",
+                                                   "suburb_name_2016",
+                                                   "ratio",
+                                                   "percentage"),
+                                     col_types = c("text","text","text","text","numeric","numeric"))
+  
+  mapping_2006_2016 <- mapping_2006_2016_raw %>%
+    group_by(suburb_code_2006,suburb_name_2006) %>%
+    mutate(rank = rank(desc(ratio))) %>%
+    filter(rank == 1) %>%
+    ungroup()
+  
+  seifa_2006 <- seifa_2006_unmatched %>%
+    left_join(mapping_2006_2016, by = c("suburb_code_2006","suburb_name_2006")) %>%
+    mutate(year = 2006) %>%
+    select(suburb_code = 8,suburb_name = 9,13,3,4,5,6,7)
 
-write_rds(crime_score,"data/created/crime_score.rds")
+# [7] ---- Matching 2001 to 2016 ----
 
+  seifa_2001 <- seifa_2001_unmatched %>%
+    left_join(mapping_2006_2016, by = c("suburb_code_2006","suburb_name_2006")) %>%
+    mutate(year = 2001) %>%
+    select(suburb_code = 9,suburb_name = 10,14,3,4,5,6,7)
 
+# [8] ---- Combining Seifa Scores ---- 
+  
+  seifa_wide <- seifa_2016 %>%
+    bind_rows(seifa_2011) %>%
+    bind_rows(seifa_2006) %>%
+    bind_rows(seifa_2001) %>%
+    arrange(suburb_code, desc(year)) 
+  
+  # Make long
+  
+  seifa_long <- seifa_wide %>%
+    gather("index","value",-c(suburb_code,suburb_name,year,usual_resident_population))
+  
+# [8] ---- Visualise example ---- 
+  
+  haberfield <- seifa_long %>%
+    filter(suburb_name == "Haberfield")
+  
+  ggplot(haberfield, aes(year,value,colour = index)) +
+    geom_line()
+  
+# [9] ---- Save off seifa scores ----
+
+write_rds(seifa_wide,"data/created/seifa.rds")
