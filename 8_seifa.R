@@ -230,6 +230,7 @@
     bind_rows(seifa_2011) %>%
     bind_rows(seifa_2006) %>%
     bind_rows(seifa_2001) %>%
+    mutate(suburb_code = as.numeric(suburb_code)) %>%
     arrange(suburb_code, desc(year)) 
   
   # Make long
@@ -247,4 +248,4 @@
   
 # [9] ---- Save off seifa scores ----
 
-write_rds(seifa_wide,"data/created/seifa.rds")
+write_rds(seifa_wide,"data/created/seifa_scores.rds")
