@@ -94,16 +94,23 @@
   crime_score <- overall_crime %>%
     mutate(crime_score = (10*violent_crime)+(5*dasg_crime)+other_crime) %>%
     mutate(log_crime_score = case_when(crime_score == 0 ~ 0,
-                                       crime_score > 0 ~ log(crime_score)))
+                                       crime_score >=1 ~ 1+log(crime_score)))
 
 # [4] ---- check the distribution ----
   
   ggplot(crime_score, aes(log_crime_score)) +
-    geom_area()
+    geom_density()
   
+# [5] ---- add back the suburb_code  ----
+  
+  suburb_code <- suburb_base %>%
+    select(1:2)
+  
+  crime_score1 <- crime_score %>%
+    left_join(suburb_code, by = "suburb_name") %>%
+    select(8,1:7)
 
-# [5] ---- Save off crime score ----
+# [6] ---- Save off crime score ----
 
-write_rds(crime_score,"data/created/crime_score.rds")
-
-
+write_rds(crime_score1,"data/created/crime_score.rds")
+  
