@@ -113,6 +113,11 @@
     select(path_lower) %>%
     as_vector()
   
+  # Census data
+  census_path <- drop_dir(path = "ilab2019/census") %>%
+    select(path_lower) %>%
+    as_vector()
+  
 # [3] ---- Download the data ----  
   
   # Property sales data
@@ -152,3 +157,6 @@
   
   # Metro Aria data
   sapply(metro_aria_path,my_download,local_path = "data/metro_aria") 
+  
+  # Census data
+  sapply(census_path,my_download,local_path = "data/census") 
