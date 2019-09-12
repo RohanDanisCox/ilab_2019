@@ -148,13 +148,13 @@ library(RColorBrewer)
     left_join(method_of_travel_2016, by = c("suburb_name_2016", "year")) %>%
     left_join(dwelling_type_2016, by = c("suburb_name_2016", "year"))
   
-  
   correspondence <- readRDS("data/created/correspondence.rds")
+  names(correspondence)
   
   suburb_correspondence_2006 <- correspondence %>%
     select(1:4)
   suburb_correspondence_2011 <- correspondence %>%
-    select(1:2,5:6)
+    select(1:2,6:7)
   suburb_correspondence_2016 <- correspondence %>%
     select(1:2)
   
@@ -173,10 +173,46 @@ library(RColorBrewer)
     select(14,suburb_name = 1,5,2:4,6:13) %>%
     distinct()
   
-  census_measures <- census_measures_2006_ready %>%
+  census_measures_raw <- census_measures_2006_ready %>%
     bind_rows(census_measures_2011_ready) %>%
     bind_rows(census_measures_2016_ready) %>%
     arrange(suburb_code, year)
+ 
+# [4] ---- Allowing for amalgamated suburbs ----
+  
+  amalgamated_suburb <- correspondence %>%
+    select(1:4) %>% 
+    group_by(suburb_code,suburb_name) %>%
+    mutate(n = n(),
+           amalgamated = case_when(n>1 ~ TRUE,
+                                TRUE ~ FALSE)) %>%
+    filter(amalgamated == TRUE) %>%
+    select(1:2,6) %>%
+    distinct()
+  
+  amalgamated_census <- census_measures_raw %>%
+    left_join(amalgamated_suburb, by = c("suburb_code", "suburb_name")) %>%
+    filter(amalgamated == TRUE) %>%
+    group_by(suburb_code,suburb_name,year) %>%
+    mutate(combined_population = sum(confirmed_population),
+           individual_population = confirmed_population) %>%
+    group_by(suburb_code,suburb_name,year) %>%
+    summarise(confirmed_population = sum(individual_population),
+              working_age_proportion = weighted.mean(working_age_proportion,individual_population/confirmed_population),
+              senior_citizen_proportion = weighted.mean(senior_citizen_proportion,individual_population/confirmed_population),
+              confirmed_journeys = sum(confirmed_journeys),
+              public_transport_proportion = weighted.mean(public_transport_proportion,individual_population/confirmed_population),
+              motor_vehicle_proportion = weighted.mean(motor_vehicle_proportion,individual_population/confirmed_population),
+              bicycle_walking_proportion = weighted.mean(bicycle_walking_proportion,individual_population/confirmed_population),
+              confirmed_dwellings = sum(confirmed_dwellings),
+              house_and_semi_proportion = weighted.mean(house_and_semi_proportion,individual_population/confirmed_population),
+              unit_proportion = weighted.mean(unit_proportion,individual_population/confirmed_population),
+              other_proportion = weighted.mean(other_proportion,individual_population/confirmed_population))
+              
+  census_measures <- census_measures_raw %>%
+    anti_join(amalgamated_suburb, by = c("suburb_code", "suburb_name")) %>%
+    bind_rows(amalgamated_census) %>%
+    arrange(suburb_code,year)
   
 # [3] ---- Save off as artefact ----
   

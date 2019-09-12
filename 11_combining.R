@@ -35,12 +35,181 @@
 # [2] ---- Getting the years right ----
   year <- tibble(year = 1990:2019)
   
-  suburbs <- suburb_2016 %>%
+  suburbs_distinct <- suburb_2016 %>%
     select(1:2)
   
-  suburbs <- crossing(suburbs, year)
+  suburbs_raw <- crossing(suburbs_distinct, year) %>%
+    arrange(suburb_code,year)
 
-# [3] ---- Handling Census scores----
+# [3] ---- Handling Census & SEIFA information scores----
+  
+  # Add suburb correspondence quality to decide whether it is fair to extrapolate
+  
+  suburbs <- correspondence %>%
+    select(1,2,5,8) %>%
+    mutate(can_extrapolate = case_when(quality_indicator_2011 %in% c("Good","Acceptable") ~ 1,
+                                  TRUE ~ 0)) %>%
+    select(1,2,5) %>%
+    distinct() %>%
+    right_join(suburbs_raw, by = c("suburb_code", "suburb_name")) %>%
+    select(1,2,4,3)
+
+  # Build a function ------- LAG CALCULATION VERSION - slower but cleaner code
+
+  interpolate_extrapolate_lag <- function(df,var){
+    quo_var <- enquo(var)
+    df_names <- append("valid",names(df),after = length(df)) # for joining later
+    
+    # Identify whether the suburb has enough valid values to interpolate
+    data <- suburbs %>%
+      left_join(df, by = c("suburb_code", "suburb_name", "year")) %>%
+      group_by(suburb_code,suburb_name) %>%
+      mutate(valid = sum(!is.na(!!quo_var))) %>%
+      ungroup()
+    
+    # Interpolate values and then use the value change between 2015 and 2016 to extrapolate until 2019 if allowable
+    data_incl <- data %>%
+      filter(valid > 1) %>%
+      group_by(suburb_code,suburb_name) %>%
+      arrange(year) %>%
+      mutate(interpolate_value=approx(x = year,y = !!quo_var,xout = year)$y) %>%
+      mutate(extrapolate_value_change = interpolate_value - lag(interpolate_value)) %>%
+      mutate(extrapolate_value = case_when(year == 2017 ~ lag(interpolate_value)+lag(extrapolate_value_change),
+                                           year == 2018 ~ lag(interpolate_value,2) + (lag(extrapolate_value_change,2)*2),
+                                           year == 2019 ~ lag(interpolate_value,3) + (lag(extrapolate_value_change,3)*3),
+                                           TRUE ~ NA_real_)) %>% 
+      mutate(extrapolate_value = case_when(year == 2017 & can_extrapolate == 0 ~ lag(interpolate_value),
+                                           year == 2018 & can_extrapolate == 0 ~ lag(interpolate_value,2),
+                                           year == 2019 & can_extrapolate == 0 ~ lag(interpolate_value,3),
+                                           TRUE ~ extrapolate_value)) %>% 
+      ungroup()
+    
+    # Use the 2016 value for all years up to 2019
+    data_excl <- data %>%
+      filter(valid == 1) %>%
+      group_by(suburb_code,suburb_name) %>%
+      arrange(year) %>%
+      mutate(value = case_when(year %in% c(2016,2017,2018,2019) ~ mean(!!quo_var,na.rm = TRUE),
+                               TRUE ~ NA_real_)) %>%
+      ungroup()
+    
+    # combine and filter the data
+    final_data <- data %>%
+      left_join(data_incl, by = df_names) %>%
+      left_join(data_excl, by = df_names) %>%
+      mutate(!!quo_var := case_when(valid == 1 ~ value,
+                                    year > 2016 ~ extrapolate_value,
+                                    year <= 2016 ~ interpolate_value)) %>%
+      select(suburb_code,suburb_name, year, !!quo_var)
+  }
+  
+  ## Census data - as C
+  
+  c1 <- interpolate_extrapolate_lag(census_scores,confirmed_population)
+  c2 <- interpolate_extrapolate_lag(census_scores,working_age_proportion)
+  c3 <- interpolate_extrapolate_lag(census_scores,senior_citizen_proportion)
+  c4 <- interpolate_extrapolate_lag(census_scores,confirmed_journeys)
+  c5 <- interpolate_extrapolate_lag(census_scores,public_transport_proportion)
+  c6 <- interpolate_extrapolate_lag(census_scores,motor_vehicle_proportion)
+  c7 <- interpolate_extrapolate_lag(census_scores,bicycle_walking_proportion)
+  c8 <- interpolate_extrapolate_lag(census_scores,confirmed_dwellings)
+  c9 <- interpolate_extrapolate_lag(census_scores,house_and_semi_proportion)
+  c10 <- interpolate_extrapolate_lag(census_scores,unit_proportion)
+  c11 <- interpolate_extrapolate_lag(census_scores,other_proportion)
+  
+  census <- c1 %>%
+    left_join(c2,by = c("suburb_code", "suburb_name", "year")) %>%
+    left_join(c3,by = c("suburb_code", "suburb_name", "year")) %>%
+    left_join(c4,by = c("suburb_code", "suburb_name", "year")) %>%
+    left_join(c5,by = c("suburb_code", "suburb_name", "year")) %>%
+    left_join(c6,by = c("suburb_code", "suburb_name", "year")) %>%
+    left_join(c7,by = c("suburb_code", "suburb_name", "year")) %>%
+    left_join(c8,by = c("suburb_code", "suburb_name", "year")) %>%
+    left_join(c9,by = c("suburb_code", "suburb_name", "year")) %>%
+    left_join(c10,by = c("suburb_code", "suburb_name", "year")) %>%
+    left_join(c11,by = c("suburb_code", "suburb_name", "year"))
+  
+ ## SEIFA data - as S
+  
+  s1 <- interpolate_scores_seifa(seifa_scores,usual_resident_population)
+  s2 <- interpolate_scores_seifa(seifa_scores, relative_socio_economic_disadvantage_index)
+  s3 <- interpolate_scores_seifa(seifa_scores, relative_socio_economic_adv_disadv_index)
+  s4 <- interpolate_scores_seifa(seifa_scores, economic_resources_index)
+  s5 <- interpolate_scores_seifa(seifa_scores, education_and_occupation_index)
+  
+  seifa <- s1 %>%
+    left_join(s2,by = c("suburb_code", "suburb_name", "year")) %>%
+    left_join(s3,by = c("suburb_code", "suburb_name", "year")) %>%
+    left_join(s4,by = c("suburb_code", "suburb_name", "year")) %>%
+    left_join(s5,by = c("suburb_code", "suburb_name", "year")) %>%
+    mutate(usual_resident_population = round(usual_resident_population,0))
+
+# [5] ---- Combine all the data ----
+  
+  crime <- crime_score %>%
+    select(suburb_code,suburb_name,year,crime_score = log_crime_score)
+  
+  education <- suburbs %>%
+    left_join(education_score, by = c("suburb_code", "suburb_name")) %>%
+    select(suburb_code,suburb_name,year,education_score)
+  
+  green <- suburbs %>%
+    left_join(green_score, by = c("suburb_code", "suburb_name")) %>%
+    select(suburb_code,suburb_name,year, green_score)
+  
+  all <- suburbs %>%
+    left_join(crime, by = c("suburb_code", "suburb_name", "year")) %>%
+    left_join(education, by = c("suburb_code", "suburb_name", "year")) %>%
+    left_join(green, by = c("suburb_code", "suburb_name", "year")) %>%
+    left_join(seifa, by = c("suburb_code", "suburb_name", "year"))
+  
+  
+# [XX] ---- Extra Redundant Functions ----
+  
+  # Census interpolate and extrapolate - LINEAR MODEL VERSION
+  
+  interpolate_extrapolate_lm <- function(df,var){
+    quo_var <- enquo(var)
+    df_names <- append("valid",names(df),after = length(df)) # for joining later
+    
+    # Identify whether the suburb has enough valid values to interpolate
+    data <- suburbs %>%
+      left_join(census_scores, by = c("suburb_code", "suburb_name", "year")) %>%
+      group_by(suburb_code,suburb_name) %>%
+      mutate(valid = sum(!is.na(!!quo_var))) %>%
+      ungroup()
+    
+    # Interpolate values and then fit a linear model to each suburb and use this to extrapolate beyond 2016
+    data_incl <- data %>%
+      filter(valid > 1) %>%
+      group_by(suburb_code,suburb_name) %>%
+      arrange(year) %>%
+      mutate(interpolate_value=approx(x = year,y = !!quo_var,xout = year)$y) %>%
+      ungroup() %>%
+      nest(-c(suburb_code,suburb_name)) %>%
+      mutate(fit = map(data, ~ lm(interpolate_value ~ year, data = .x)), # Fitting a simple linear model to the interpolated values by year
+             prediction = map2(fit,data,predict)) %>% # Get predictions based on this model for all years
+      unnest(prediction,data) %>%
+      mutate(prediction = prediction)
+    
+    # Use the 2016 value for all years up to 2019
+    data_excl <- data %>%
+      filter(valid == 1) %>%
+      group_by(suburb_code,suburb_name) %>%
+      arrange(year) %>%
+      mutate(value = case_when(year %in% c(2016,2017,2018,2019) ~ mean(!!quo_var,na.rm = TRUE),
+                               TRUE ~ NA_real_)) %>%
+      ungroup()
+    
+    # combine and filter the data
+    final_data <- data %>%
+      left_join(data_incl, by = df_names) %>%
+      left_join(data_excl, by = df_names) %>%
+      mutate(!!quo_var := case_when(valid == 1 ~ value,
+                                    year > 2016 ~ prediction,
+                                    year <= 2016 ~ interpolate_value)) %>%
+      select(suburb_code,suburb_name, year, !!quo_var)
+  }
   
   # Create a function to interpolate scores
   interpolate_scores_census <- function(df,var) {
@@ -77,39 +246,9 @@
       mutate(year = str_replace(year,"y","")) %>%
       mutate(year = as.numeric(year)) %>%
       mutate(!!name := case_when(is.infinite(!!use_var) ~ NA_real_,
-                                                   TRUE ~ !!use_var)) %>%
+                                 TRUE ~ !!use_var)) %>%
       arrange(suburb_code,year)
   }
-  
-  ## CENSUS
-  names(census_scores)
-  
-  a <- interpolate_scores_census(census_scores,confirmed_population)
-  b <- interpolate_scores_census(census_scores,working_age_proportion)
-  c <- interpolate_scores_census(census_scores,senior_citizen_proportion)
-  d <- interpolate_scores_census(census_scores,confirmed_journeys)
-  e <- interpolate_scores_census(census_scores,public_transport_proportion)
-  f <- interpolate_scores_census(census_scores,motor_vehicle_proportion)
-  g <- interpolate_scores_census(census_scores,bicycle_walking_proportion)
-  h <- interpolate_scores_census(census_scores,confirmed_dwellings)
-  i <- interpolate_scores_census(census_scores,house_and_semi_proportion)
-  j <- interpolate_scores_census(census_scores,unit_proportion)
-  k <- interpolate_scores_census(census_scores,other_proportion)
-
-  census <- a %>%
-    left_join(b,by = c("suburb_code", "suburb_name", "year")) %>%
-    left_join(c,by = c("suburb_code", "suburb_name", "year")) %>%
-    left_join(d,by = c("suburb_code", "suburb_name", "year")) %>%
-    left_join(e,by = c("suburb_code", "suburb_name", "year")) %>%
-    left_join(f,by = c("suburb_code", "suburb_name", "year")) %>%
-    left_join(g,by = c("suburb_code", "suburb_name", "year")) %>%
-    left_join(h,by = c("suburb_code", "suburb_name", "year")) %>%
-    left_join(i,by = c("suburb_code", "suburb_name", "year")) %>%
-    left_join(j,by = c("suburb_code", "suburb_name", "year")) %>%
-    left_join(k,by = c("suburb_code", "suburb_name", "year"))
-  
- 
-  # [4] ---- Handling Seifa scores ----
   
   # Create a function to interpolate scores
   interpolate_scores_seifa <- function(df,var) {
@@ -154,38 +293,4 @@
                                  TRUE ~ round(!!use_var,1))) %>%
       arrange(suburb_code,year)
   }
-
-  names(seifa_scores)
-  
-  usual_res_pop <- interpolate_scores_seifa(seifa_scores,usual_resident_population)
-  rel_dis <- interpolate_scores_seifa(seifa_scores, relative_socio_economic_disadvantage_index)
-  rel_adv_dis<- interpolate_scores_seifa(seifa_scores, relative_socio_economic_adv_disadv_index)
-  eco_res <- interpolate_scores_seifa(seifa_scores, economic_resources_index)
-  edu_occ <- interpolate_scores_seifa(seifa_scores, education_and_occupation_index)
-  
-  seifa <- usual_res_pop %>%
-    left_join(rel_dis,by = c("suburb_code", "suburb_name", "year")) %>%
-    left_join(rel_adv_dis,by = c("suburb_code", "suburb_name", "year")) %>%
-    left_join(eco_res,by = c("suburb_code", "suburb_name", "year")) %>%
-    left_join(edu_occ,by = c("suburb_code", "suburb_name", "year")) %>%
-    mutate(usual_resident_population = round(usual_resident_population,0))
-
-# [5] ---- Combine all the data ----
-  
-  crime <- crime_score %>%
-    select(suburb_code,suburb_name,year,crime_score = log_crime_score)
-  
-  education <- suburbs %>%
-    left_join(education_score, by = c("suburb_code", "suburb_name")) %>%
-    select(suburb_code,suburb_name,year,education_score)
-  
-  green <- suburbs %>%
-    left_join(green_score, by = c("suburb_code", "suburb_name")) %>%
-    select(suburb_code,suburb_name,year, green_score)
-  
-  all <- suburbs %>%
-    left_join(crime, by = c("suburb_code", "suburb_name", "year")) %>%
-    left_join(education, by = c("suburb_code", "suburb_name", "year")) %>%
-    left_join(green, by = c("suburb_code", "suburb_name", "year")) %>%
-    left_join(seifa, by = c("suburb_code", "suburb_name", "year"))
   
