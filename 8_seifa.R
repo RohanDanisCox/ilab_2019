@@ -226,19 +226,60 @@
 
 # [8] ---- Combining Seifa Scores ---- 
   
-  seifa_wide <- seifa_2016 %>%
+  seifa_wide_raw <- seifa_2016 %>%
     bind_rows(seifa_2011) %>%
     bind_rows(seifa_2006) %>%
     bind_rows(seifa_2001) %>%
     mutate(suburb_code = as.numeric(suburb_code)) %>%
     arrange(suburb_code, desc(year)) 
   
+# [9] ---- Allowing for amalgamated suburbs ----
+  correspondence <- readRDS("data/created/correspondence.rds")
+  
+  amalgamated_suburb <- correspondence %>%
+    select(1:4) %>% 
+    group_by(suburb_code,suburb_name) %>%
+    mutate(n = n(),
+           amalgamated = case_when(n>1 ~ TRUE,
+                                   TRUE ~ FALSE)) %>%
+    filter(amalgamated == TRUE) %>%
+    select(1:2,6) %>%
+    distinct()
+  
+  amalgamated_seifa <- seifa_wide_raw %>%
+    left_join(amalgamated_suburb, by = c("suburb_code", "suburb_name")) %>%
+    filter(amalgamated == TRUE) %>%
+    group_by(suburb_code,suburb_name,year) %>%
+    mutate(combined_usual_population = sum(usual_resident_population),
+           individual_usual_population = usual_resident_population) %>%
+    group_by(suburb_code,suburb_name,year) %>%
+    summarise(usual_resident_population = sum(usual_resident_population),
+              relative_socio_economic_disadvantage_index = weighted.mean(relative_socio_economic_disadvantage_index,
+                                                                         individual_usual_population/combined_usual_population),
+              relative_socio_economic_adv_disadv_index = weighted.mean(relative_socio_economic_adv_disadv_index,
+                                                                           individual_usual_population/combined_usual_population),
+              economic_resources_index = weighted.mean(economic_resources_index,
+                                                                       individual_usual_population/combined_usual_population),
+              education_and_occupation_index = weighted.mean(education_and_occupation_index,
+                                                                       individual_usual_population/combined_usual_population))
+  
+  seifa <- seifa_wide_raw %>%
+    anti_join(amalgamated_suburb, by = c("suburb_code", "suburb_name")) %>%
+    bind_rows(amalgamated_seifa) %>% 
+    filter(!is.na(suburb_code)) %>%
+    arrange(suburb_code,year)
+  
+  seifa_test <- seifa %>%
+    group_by(suburb_code,suburb_name, year) %>%
+    summarise(n = n())
+  
+  
+# [10] ---- Visualise example ---- 
+  
   # Make long
   
-  seifa_long <- seifa_wide %>%
+  seifa_long <- seifa %>%
     gather("index","value",-c(suburb_code,suburb_name,year,usual_resident_population))
-  
-# [8] ---- Visualise example ---- 
   
   haberfield <- seifa_long %>%
     filter(suburb_name == "Haberfield")
@@ -246,6 +287,6 @@
   ggplot(haberfield, aes(year,value,colour = index)) +
     geom_line()
   
-# [9] ---- Save off seifa scores ----
+# [11] ---- Save off seifa scores ----
 
-write_rds(seifa_wide,"data/created/seifa_scores.rds")
+  write_rds(seifa,"data/created/seifa_scores.rds")

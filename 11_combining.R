@@ -131,11 +131,11 @@
   
  ## SEIFA data - as S
   
-  s1 <- interpolate_scores_seifa(seifa_scores,usual_resident_population)
-  s2 <- interpolate_scores_seifa(seifa_scores, relative_socio_economic_disadvantage_index)
-  s3 <- interpolate_scores_seifa(seifa_scores, relative_socio_economic_adv_disadv_index)
-  s4 <- interpolate_scores_seifa(seifa_scores, economic_resources_index)
-  s5 <- interpolate_scores_seifa(seifa_scores, education_and_occupation_index)
+  s1 <- interpolate_extrapolate_lag(seifa_scores, usual_resident_population)
+  s2 <- interpolate_extrapolate_lag(seifa_scores, relative_socio_economic_disadvantage_index)
+  s3 <- interpolate_extrapolate_lag(seifa_scores, relative_socio_economic_adv_disadv_index)
+  s4 <- interpolate_extrapolate_lag(seifa_scores, economic_resources_index)
+  s5 <- interpolate_extrapolate_lag(seifa_scores, education_and_occupation_index)
   
   seifa <- s1 %>%
     left_join(s2,by = c("suburb_code", "suburb_name", "year")) %>%
@@ -144,7 +144,7 @@
     left_join(s5,by = c("suburb_code", "suburb_name", "year")) %>%
     mutate(usual_resident_population = round(usual_resident_population,0))
 
-# [5] ---- Combine all the data ----
+# [5] ---- Combine suburbs with the remaining scores ----
   
   crime <- crime_score %>%
     select(suburb_code,suburb_name,year,crime_score = log_crime_score)
@@ -157,11 +157,44 @@
     left_join(green_score, by = c("suburb_code", "suburb_name")) %>%
     select(suburb_code,suburb_name,year, green_score)
   
-  all <- suburbs %>%
+# [6] ---- Save / Load Ready Data ----
+  
+  # Save off now that ready to combine
+  write_rds(suburbs,"data/created/ready_to_combine/suburbs.rds")
+  write_rds(crime,"data/created/ready_to_combine/crime.rds")
+  write_rds(education,"data/created/ready_to_combine/education.rds")
+  write_rds(green,"data/created/ready_to_combine/green.rds")
+  write_rds(census,"data/created/ready_to_combine/census.rds")
+  write_rds(seifa,"data/created/ready_to_combine/seifa.rds")
+  
+  # Load ready data
+  suburbs <- readRDS("data/created/ready_to_combine/suburbs.rds")
+  crime <- readRDS("data/created/ready_to_combine/crime.rds")
+  education <- readRDS("data/created/ready_to_combine/education.rds")
+  green <- readRDS("data/created/ready_to_combine/green.rds")
+  census <- readRDS("data/created/ready_to_combine/census.rds")
+  seifa <- write_rds("data/created/ready_to_combine/seifa.rds")
+  
+# [7] ---- Creating the master file ----
+  
+  master_raw <- suburbs %>%
     left_join(crime, by = c("suburb_code", "suburb_name", "year")) %>%
     left_join(education, by = c("suburb_code", "suburb_name", "year")) %>%
     left_join(green, by = c("suburb_code", "suburb_name", "year")) %>%
+    left_join(census, by = c("suburb_code", "suburb_name", "year")) %>%
     left_join(seifa, by = c("suburb_code", "suburb_name", "year"))
+  
+  write_rds(master_raw,"data/created/ready_to_combine/master_raw.rds")
+  master_raw <- readRDS("data/created/ready_to_combine/master_raw.rds")
+  # Adding in extra measures based on combinations of existing measures
+  
+    # Dwelling density
+    
+    # Turnover
+  
+    # Median land value
+  
+    # Median house price less land value
   
   
 # [XX] ---- Extra Redundant Functions ----

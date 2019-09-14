@@ -198,16 +198,16 @@ library(RColorBrewer)
            individual_population = confirmed_population) %>%
     group_by(suburb_code,suburb_name,year) %>%
     summarise(confirmed_population = sum(individual_population),
-              working_age_proportion = weighted.mean(working_age_proportion,individual_population/confirmed_population),
-              senior_citizen_proportion = weighted.mean(senior_citizen_proportion,individual_population/confirmed_population),
+              working_age_proportion = weighted.mean(working_age_proportion,individual_population/combined_population),
+              senior_citizen_proportion = weighted.mean(senior_citizen_proportion,individual_population/combined_population),
               confirmed_journeys = sum(confirmed_journeys),
-              public_transport_proportion = weighted.mean(public_transport_proportion,individual_population/confirmed_population),
-              motor_vehicle_proportion = weighted.mean(motor_vehicle_proportion,individual_population/confirmed_population),
-              bicycle_walking_proportion = weighted.mean(bicycle_walking_proportion,individual_population/confirmed_population),
+              public_transport_proportion = weighted.mean(public_transport_proportion,individual_population/combined_population),
+              motor_vehicle_proportion = weighted.mean(motor_vehicle_proportion,individual_population/combined_population),
+              bicycle_walking_proportion = weighted.mean(bicycle_walking_proportion,individual_population/combined_population),
               confirmed_dwellings = sum(confirmed_dwellings),
-              house_and_semi_proportion = weighted.mean(house_and_semi_proportion,individual_population/confirmed_population),
-              unit_proportion = weighted.mean(unit_proportion,individual_population/confirmed_population),
-              other_proportion = weighted.mean(other_proportion,individual_population/confirmed_population))
+              house_and_semi_proportion = weighted.mean(house_and_semi_proportion,individual_population/combined_population),
+              unit_proportion = weighted.mean(unit_proportion,individual_population/combined_population),
+              other_proportion = weighted.mean(other_proportion,individual_population/combined_population))
               
   census_measures <- census_measures_raw %>%
     anti_join(amalgamated_suburb, by = c("suburb_code", "suburb_name")) %>%
