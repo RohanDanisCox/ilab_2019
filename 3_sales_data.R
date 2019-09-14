@@ -18,9 +18,9 @@
   library(lubridate)
   library(ggplot2)
   library(forcats)
-  library(data.table)
-  library(furrr)
-  library(rbenchmark)
+  #library(data.table)
+  #library(furrr)
+  #library(rbenchmark)
   library(parallel)
   library(multidplyr)
 
@@ -195,9 +195,8 @@
     
   # Can't find any of these so doesn't look like it adds any value
   
-# [8] ---- Can start from here now ----  
+# [8] ---- Can start from here now for sales ----  
   
-  matched_land_value <- readRDS("data/land_value/matched_land_value.rds")
   matched_sales <- readRDS("data/sales/matched_sales.rds")
   
 # [9] ---- What are the useful variables? ---- 
@@ -207,9 +206,6 @@
                                                              na_count = sum(is.na(.x)))),
                                                 .id = "variable")
  
-
-  
-  
 # [10] ---- Filter Sales down to only those that are useful ----   
   
   sales <- matched_sales %>%
@@ -346,7 +342,8 @@
 # [11b] ---- Try using Multiplyr ----   
   
   # Set number of cores into clusters
-  cluster <- new_cluster(8)
+  cores <- detectCores()
+  cluster <- new_cluster(cores)
 
   # 
   df_clustered <- df_big %>% 
@@ -368,7 +365,7 @@
 
   write_rds(median_9m_window,"data/created/median_9m_window.rds")
   
-  # [12] ---- Get volume of sales per year to use for turnover statistics ----
+# [12] ---- Get volume of sales per year to use for turnover statistics ----
   
   annual_turnover_subset <- cleaned_sales %>%
     select(suburb_code,suburb_name,year,contract_date,purchase_price,property_type) 
@@ -384,6 +381,42 @@
     collect()
   
   write_rds(annual_turnover,"data/created/annual_turnover.rds")
+  
+# [13] ---- Can start from here for land values ----  
+  
+  matched_land_value <- readRDS("data/land_value/matched_land_value.rds")
+  
+  matched_land_bio <- matched_land_value %>% map_df(~(data.frame(n_distinct = n_distinct(.x),
+                                                             class = class(.x),
+                                                             na_count = sum(is.na(.x)))),
+                                                .id = "variable")
+  
+  table(matched_land_value$area_type)
+  glimpse(matched_land_value)
+  
+  # Filter down to what is useful
+  
+  land_value <- matched_land_value %>%
+    select(-c(property_name,property_description,basis_2012,authority_2012,basis_2013,authority_2013,
+              basis_2014,authority_2014,basis_2015,authority_2015,basis_2016,authority_2016,
+              basis_2017,authority_2017,basis_2018,authority_2018)) %>%
+    mutate(area_type = fct_explicit_na(case_when(is.na(area_type) ~ NA_character_,
+                                                 TRUE ~ area_type)),
+           area = case_when(area_type == "H" ~ area *10000,
+                            TRUE ~ area)) %>%
+    select(-area_type) %>%
+    select(26:27,1:25)
+  
+  land_value_1 <- land_value %>%
+    gather(key = "year", value = "land_value",c(land_value_2012,land_value_2013,land_value_2014,land_value_2015,
+                        land_value_2016,land_value_2017,land_value_2018)) %>%
+    mutate(year = as.numeric(str_replace(year,"land_value_",""))) %>%
+    select(-c(base_date_2018:base_date_2012))
+      
+  land_value_2 <- land_value_1 %>%
+    distinct()
+  
+
   
 #### ---- Below here are all things I tried but are now redundant ----
   
