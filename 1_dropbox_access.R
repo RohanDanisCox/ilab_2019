@@ -20,7 +20,7 @@
   # These have been used to create drop_tokens on home computer and transferred to GCP.
   #token <- drop_auth()
   #saveRDS(token, "DropToken.RDS")
-  
+
   drop_auth(new_user = FALSE, rdstoken = "DropToken.RDS")
   directories <- drop_dir("/ilab2019")
   

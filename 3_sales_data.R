@@ -22,6 +22,7 @@
   library(furrr)
   library(rbenchmark)
   library(parallel)
+  library(multidplyr)
 
 # [1] ---- Load Data ----
   
@@ -182,19 +183,34 @@
   saveRDS(sales_data1,"data/sales/matched_sales.rds")
   saveRDS(land_value1,"data/land_value/matched_land_value.rds")
   
-# [7] ---- Can start from here now ----  
+  
+# [7] ---- Check whether it is worth matching instead with the 2018 Locality data file ---- 
+  
+  correspondence <- readRDS("data/created/correspondence.rds") %>%
+    select(suburb_code_correspondence = 1, suburb_name_correspondence = 2, locality = 9, post_code = 10)
+  
+  matched_sales_loc <- matched_sales %>%
+    filter(is.na(suburb_code))
+    inner_join(correspondence, by = c("locality","post_code")) 
+    
+  # Can't find any of these so doesn't look like it adds any value
+  
+# [8] ---- Can start from here now ----  
   
   matched_land_value <- readRDS("data/land_value/matched_land_value.rds")
   matched_sales <- readRDS("data/sales/matched_sales.rds")
   
-# [8] ---- What are the useful variables? ---- 
+# [9] ---- What are the useful variables? ---- 
   
   matched_sales_bio <- matched_sales %>% map_df(~(data.frame(n_distinct = n_distinct(.x),
                                                              class = class(.x),
                                                              na_count = sum(is.na(.x)))),
                                                 .id = "variable")
+ 
+
   
-# [9] ---- Filter Sales down to only those that are useful ----   
+  
+# [10] ---- Filter Sales down to only those that are useful ----   
   
   sales <- matched_sales %>%
     select(-c(record_type,download_date,source,sale_counter,property_name,dimensions,land_description,
@@ -304,16 +320,15 @@
 
   saveRDS(cleaned_sales,"data/created/cleaned_sales.rds")
   
-# [10] ---- Start here with cleaned sales ---- 
+# [11] ---- Start here with cleaned sales ---- 
   
   cleaned_sales <- readRDS("data/created/cleaned_sales.rds")
-  
  
 # [11] ---- Calculate a rolling median ----  
   
 # [11a] ---- Method 2 - duplicate the dataset across time windows and then group_by time window when calculating median ----
   sales_subset <- cleaned_sales %>%
-    select(quarter,contract_date, suburb_name, purchase_price,property_type) 
+    select(quarter,contract_date, suburb_code, suburb_name, purchase_price,property_type) 
   
   df_1 <- sales_subset %>%
     mutate(target_date_window = quarter)
@@ -326,28 +341,51 @@
   
   df_big <- bind_rows(df_1,df_2,df_3)
   
-  small_df <- df_big %>%
-    filter(str_detect(suburb_name, "^A"))
+  table(df_big$property_type)
   
-  system.time(check <- small_df %>%
-    group_by(target_date_window,suburb_name,property_type) %>%
+# [11b] ---- Try using Multiplyr ----   
+  
+  # Set number of cores into clusters
+  cluster <- new_cluster(8)
+
+  # 
+  df_clustered <- df_big %>% 
+    group_by(suburb_code,suburb_name,target_date_window,property_type) %>% 
+    partition(cluster)
+  df_clustered
+  
+  median_9m_window <- df_clustered %>%
     summarise(median = median(purchase_price),
-              n = n()))
+              number_of_sales = n()) %>%
+    collect()
+
+  glebe_check <- median_9m_window %>%
+    filter(suburb_name == "Glebe (NSW)") %>%
+    filter(property_type != "Land")
   
-  check2 <- check %>%
-    filter(suburb_name == "Abbotsford (NSW)") %>%
-    filter(property_type == "House")
+  ggplot(glebe_check,aes(target_date_window,median,colour = property_type)) +
+    geom_line()
+
+  write_rds(median_9m_window,"data/created/median_9m_window.rds")
   
-  ggplot(check, aes(x = current_quarter, y = median)) +
-    geom_point()
+  # [12] ---- Get volume of sales per year to use for turnover statistics ----
   
-  check3 <- med_data %>%
-    filter(suburb_name == "Abbotsford (NSW)") %>%
-    filter(property_type == "House") %>%
-    filter(contract_date <= as.Date("2019-04-01") & 
-             contract_date > as.Date("2018-07-01")) %>%
-    summarise(median = median(purchase_price))
+  annual_turnover_subset <- cleaned_sales %>%
+    select(suburb_code,suburb_name,year,contract_date,purchase_price,property_type) 
+    
+  annual_turnover_clustered <- annual_turnover_subset %>%
+    group_by(suburb_code,suburb_name,year,property_type) %>% 
+    partition(cluster)
   
+  annual_turnover_clustered
+  
+  annual_turnover <- annual_turnover_clustered %>%
+    summarise(number_of_sales = n()) %>%
+    collect()
+  
+  write_rds(annual_turnover,"data/created/annual_turnover.rds")
+  
+#### ---- Below here are all things I tried but are now redundant ----
   
   # [11b] ---- Method 1 - Create a subsetting function and iterate through using purrr ----
   df <- cleaned_sales %>%
@@ -441,3 +479,28 @@
     summarise(sales = n())
   
 # TRASH
+  
+  # This takes quite a long time - roughly 2hours for the land_median alone which is by far the smallest
+  # Could be worth trying to use dtplyr or Multiplyr
+  
+  saveRDS(land_median,"data/created/land_median.rds")
+  houses <- df_big %>%
+    filter(property_type == "House")
+  
+  apartments <- df_big %>% 
+    filter(property_type == "Apartment")
+  
+  land <- df_big %>%
+    filter(property_type == "Land")
+  
+  get_median <- function (df){
+    df %>%
+      group_by(target_date_window,suburb_name,property_type) %>%
+      summarise(median = median(purchase_price),
+                number_of_sales = n())
+  } 
+  
+  house_median <- get_median(houses) 
+  apartment_median <- get_median(apartments)
+  land_median <- get_median(land)
+  
