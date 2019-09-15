@@ -400,23 +400,58 @@
     select(-c(property_name,property_description,basis_2012,authority_2012,basis_2013,authority_2013,
               basis_2014,authority_2014,basis_2015,authority_2015,basis_2016,authority_2016,
               basis_2017,authority_2017,basis_2018,authority_2018)) %>%
+    filter(is.na(area_type) | area_type %in% c("H","M")) %>%
     mutate(area_type = fct_explicit_na(case_when(is.na(area_type) ~ NA_character_,
                                                  TRUE ~ area_type)),
            area = case_when(area_type == "H" ~ area *10000,
                             TRUE ~ area)) %>%
     select(-area_type) %>%
-    select(26:27,1:25)
+    select(26:27,1:25) %>%
+    filter(!is.na(area))
   
   land_value_1 <- land_value %>%
     gather(key = "year", value = "land_value",c(land_value_2012,land_value_2013,land_value_2014,land_value_2015,
-                        land_value_2016,land_value_2017,land_value_2018)) %>%
+                                                land_value_2016,land_value_2017,land_value_2018)) %>%
     mutate(year = as.numeric(str_replace(year,"land_value_",""))) %>%
     select(-c(base_date_2018:base_date_2012))
-      
-  land_value_2 <- land_value_1 %>%
-    distinct()
   
-
+  land_value_2 <- land_value_1 %>%
+    distinct() %>%
+    filter(!is.na(land_value)) %>%
+    mutate(land_value_per_sqm = land_value/area)
+  
+  saveRDS(land_value_2,"data/created/land_value_cleaned.rds")
+  
+  # [14] ---- Start here with cleaned land_values ---- 
+  
+  land_value_cleaned <- readRDS("data/created/land_value_cleaned.rds")
+  
+  land_value_subset <- land_value_cleaned %>%
+    select(suburb_code, suburb_name, year, land_value) 
+  
+  cores <- detectCores()
+  cluster <- new_cluster(cores)
+  
+  # 
+  sales_clustered <- df_big %>% 
+    group_by(suburb_code,suburb_name,target_date_window,property_type) %>% 
+    partition(cluster)
+  sales_clustered
+  
+  annual_turnover_subset <- cleaned_sales %>%
+    select(suburb_code,suburb_name,year,contract_date,purchase_price,property_type) 
+  
+  annual_turnover_clustered <- annual_turnover_subset %>%
+    group_by(suburb_code,suburb_name,year,property_type) %>% 
+    partition(cluster)
+  
+  annual_turnover_clustered
+  
+  annual_turnover <- annual_turnover_clustered %>%
+    summarise(number_of_sales = n()) %>%
+    collect()
+  
+  write_rds(annual_turnover,"data/created/annual_turnover.rds")
   
 #### ---- Below here are all things I tried but are now redundant ----
   
