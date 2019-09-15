@@ -377,10 +377,18 @@
   annual_turnover_clustered
   
   annual_turnover <- annual_turnover_clustered %>%
-    summarise(number_of_sales = n()) %>%
-    collect()
+    summarise(number_of_sales = n(),
+              median = median(purchase_price)) %>%
+    collect() %>%
+    ungroup() %>%
+    mutate(year = year(year))
   
-  write_rds(annual_turnover,"data/created/annual_turnover.rds")
+  annual_turnover_1 <- annual_turnover %>%
+    gather(variable, value, -(suburb_code:property_type)) %>%
+    unite(temp, property_type, variable) %>%
+    spread(temp, value)
+
+  saveRDS(annual_turnover_1,"data/created/annual_turnover.rds")
   
 # [13] ---- Can start from here for land values ----  
   
@@ -427,31 +435,24 @@
   land_value_cleaned <- readRDS("data/created/land_value_cleaned.rds")
   
   land_value_subset <- land_value_cleaned %>%
-    select(suburb_code, suburb_name, year, land_value) 
+    select(suburb_code, suburb_name, year, land_value, land_value_per_sqm) 
   
   cores <- detectCores()
   cluster <- new_cluster(cores)
   
   # 
-  sales_clustered <- df_big %>% 
-    group_by(suburb_code,suburb_name,target_date_window,property_type) %>% 
+  land_value_clustered <- land_value_subset %>% 
+    group_by(suburb_code,suburb_name,year) %>% 
     partition(cluster)
-  sales_clustered
+  land_value_clustered
   
-  annual_turnover_subset <- cleaned_sales %>%
-    select(suburb_code,suburb_name,year,contract_date,purchase_price,property_type) 
-  
-  annual_turnover_clustered <- annual_turnover_subset %>%
-    group_by(suburb_code,suburb_name,year,property_type) %>% 
-    partition(cluster)
-  
-  annual_turnover_clustered
-  
-  annual_turnover <- annual_turnover_clustered %>%
-    summarise(number_of_sales = n()) %>%
+  land_values <- land_value_clustered %>%
+    summarise(number_of_properties = n(),
+              median_land_value = median(land_value),
+              median_land_value_per_sqm = median(land_value_per_sqm)) %>%
     collect()
   
-  write_rds(annual_turnover,"data/created/annual_turnover.rds")
+  write_rds(land_values,"data/created/land_values.rds")
   
 #### ---- Below here are all things I tried but are now redundant ----
   

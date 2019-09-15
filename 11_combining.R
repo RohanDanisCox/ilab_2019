@@ -32,6 +32,10 @@
   
   census_scores <- readRDS("data/created/census_scores.rds")
   
+  land_values <- readRDS("data/created/land_values.rds")
+  
+  annual_turnover <- readRDS("data/created/annual_turnover.rds")
+  
 # [2] ---- Getting the years right ----
   year <- tibble(year = 1990:2019)
   
@@ -157,15 +161,22 @@
     left_join(green_score, by = c("suburb_code", "suburb_name")) %>%
     select(suburb_code,suburb_name,year, green_score)
   
+  #Add back useful stuff to suburbs
+  suburbs_add_back <- suburbs %>%
+    left_join(suburb_2016, by = c("suburb_code", "suburb_name")) %>%
+    select(1:18)
+  
 # [6] ---- Save / Load Ready Data ----
   
   # Save off now that ready to combine
-  write_rds(suburbs,"data/created/ready_to_combine/suburbs.rds")
+  write_rds(suburbs_add_back,"data/created/ready_to_combine/suburbs.rds")
   write_rds(crime,"data/created/ready_to_combine/crime.rds")
   write_rds(education,"data/created/ready_to_combine/education.rds")
   write_rds(green,"data/created/ready_to_combine/green.rds")
   write_rds(census,"data/created/ready_to_combine/census.rds")
   write_rds(seifa,"data/created/ready_to_combine/seifa.rds")
+  write_rds(land_values,"data/created/ready_to_combine/land_values.rds")
+  write_rds(annual_turnover,"data/created/ready_to_combine/annual_turnover.rds")
   
   # Load ready data
   suburbs <- readRDS("data/created/ready_to_combine/suburbs.rds")
@@ -173,7 +184,9 @@
   education <- readRDS("data/created/ready_to_combine/education.rds")
   green <- readRDS("data/created/ready_to_combine/green.rds")
   census <- readRDS("data/created/ready_to_combine/census.rds")
-  seifa <- write_rds("data/created/ready_to_combine/seifa.rds")
+  seifa <- readRDS("data/created/ready_to_combine/seifa.rds")
+  land_values <- readRDS("data/created/ready_to_combine/land_values.rds")
+  annual_turnover <- readRDS("data/created/ready_to_combine/annual_turnover.rds")
   
 # [7] ---- Creating the master file ----
   
@@ -182,21 +195,46 @@
     left_join(education, by = c("suburb_code", "suburb_name", "year")) %>%
     left_join(green, by = c("suburb_code", "suburb_name", "year")) %>%
     left_join(census, by = c("suburb_code", "suburb_name", "year")) %>%
-    left_join(seifa, by = c("suburb_code", "suburb_name", "year"))
+    left_join(seifa, by = c("suburb_code", "suburb_name", "year")) %>%
+    left_join(land_values, by = c("suburb_code", "suburb_name", "year")) %>%
+    left_join(annual_turnover, by = c("suburb_code", "suburb_name", "year"))
   
-  write_rds(master_raw,"data/created/ready_to_combine/master_raw.rds")
-  master_raw <- readRDS("data/created/ready_to_combine/master_raw.rds")
+  write_rds(master_raw,"data/created/master_raw.rds")
+  master_raw <- readRDS("data/created/master_raw.rds")
+  
   # Adding in extra measures based on combinations of existing measures
-  
-    # Dwelling density
+    master_raw_1 <- master_raw %>%
+      mutate(dwelling_density = confirmed_dwellings/suburb_area_sqkm,
+             annual_turnover = case_when(is.na(Apartment_number_of_sales) & 
+                                           is.na(House_number_of_sales) ~ NA_real_,
+                                         !is.na(Apartment_number_of_sales) & 
+                                           is.na(House_number_of_sales) ~ Apartment_number_of_sales,
+                                         is.na(Apartment_number_of_sales) & 
+                                           !is.na(House_number_of_sales) ~ House_number_of_sales,
+                                         !is.na(Apartment_number_of_sales) & 
+                                           !is.na(House_number_of_sales) ~ Apartment_number_of_sales + House_number_of_sales),
+             annual_turnover_proportion = annual_turnover / confirmed_dwellings,
+             median_house_price_less_land_value = House_median - Land_median)
     
-    # Turnover
+    write_rds(master_raw_1,"data/created/master.rds")
+    master <- readRDS("data/created/master.rds")
   
-    # Median land value
+  master_bio <- master %>% 
+    map_df(~(data.frame(n_distinct = n_distinct(.x),
+                        class = class(.x),
+                        na_count = sum(is.na(.x)))),
+           .id = "variable")
   
-    # Median house price less land value
+  summary(master)
   
+  ### Comments
   
+  # Looks like there are still a lot of random issues in several fields:
+    # negative data from census - might be fixed by just fixing negative values in confirmed pop
+    # Useless median values from locations where only a single sale occurred. What should be the minimum?
+    # Still some outlier values which aren't helping.
+  
+
 # [XX] ---- Extra Redundant Functions ----
   
   # Census interpolate and extrapolate - LINEAR MODEL VERSION
