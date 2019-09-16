@@ -36,6 +36,26 @@
   
   annual_turnover <- readRDS("data/created/annual_turnover.rds")
   
+  metro_aria_scores <- readRDS("data/created/metro_aria.rds") 
+  
+  metro_aria_year <- metro_aria_scores %>%
+    mutate(year = 2014) %>%
+    bind_rows(metro_aria_scores) %>%
+    mutate(year = case_when(is.na(year) ~ 2015,
+                            TRUE ~ year)) %>%
+    bind_rows(metro_aria_scores) %>%
+    mutate(year = case_when(is.na(year) ~ 2016,
+                            TRUE ~ year)) %>%
+    bind_rows(metro_aria_scores) %>%
+    mutate(year = case_when(is.na(year) ~ 2017,
+                            TRUE ~ year)) %>%
+    bind_rows(metro_aria_scores) %>%
+    mutate(year = case_when(is.na(year) ~ 2018,
+                            TRUE ~ year)) %>%
+    bind_rows(metro_aria_scores) %>%
+    mutate(year = case_when(is.na(year) ~ 2019,
+                            TRUE ~ year))
+  
 # [2] ---- Getting the years right ----
   year <- tibble(year = 1990:2019)
   
@@ -161,6 +181,10 @@
     left_join(green_score, by = c("suburb_code", "suburb_name")) %>%
     select(suburb_code,suburb_name,year, green_score)
   
+  metro_aria <- suburbs %>%
+    left_join(metro_aria_year, by = c("suburb_code", "suburb_name", "year")) %>%
+    select(-can_extrapolate)
+  
   #Add back useful stuff to suburbs
   suburbs_add_back <- suburbs %>%
     left_join(suburb_2016, by = c("suburb_code", "suburb_name")) %>%
@@ -177,6 +201,7 @@
   write_rds(seifa,"data/created/ready_to_combine/seifa.rds")
   write_rds(land_values,"data/created/ready_to_combine/land_values.rds")
   write_rds(annual_turnover,"data/created/ready_to_combine/annual_turnover.rds")
+  write_rds(metro_aria,"data/created/ready_to_combine/metro_aria.rds")
   
   # Load ready data
   suburbs <- readRDS("data/created/ready_to_combine/suburbs.rds")
@@ -187,6 +212,7 @@
   seifa <- readRDS("data/created/ready_to_combine/seifa.rds")
   land_values <- readRDS("data/created/ready_to_combine/land_values.rds")
   annual_turnover <- readRDS("data/created/ready_to_combine/annual_turnover.rds")
+  metro_aria <- readRDS("data/created/ready_to_combine/metro_aria.rds")
   
 # [7] ---- Creating the master file ----
   
@@ -197,27 +223,28 @@
     left_join(census, by = c("suburb_code", "suburb_name", "year")) %>%
     left_join(seifa, by = c("suburb_code", "suburb_name", "year")) %>%
     left_join(land_values, by = c("suburb_code", "suburb_name", "year")) %>%
-    left_join(annual_turnover, by = c("suburb_code", "suburb_name", "year"))
+    left_join(annual_turnover, by = c("suburb_code", "suburb_name", "year")) %>%
+    left_join(metro_aria, by = c("suburb_code", "suburb_name", "year"))
   
   write_rds(master_raw,"data/created/master_raw.rds")
   master_raw <- readRDS("data/created/master_raw.rds")
   
   # Adding in extra measures based on combinations of existing measures
-    master_raw_1 <- master_raw %>%
-      mutate(dwelling_density = confirmed_dwellings/suburb_area_sqkm,
-             annual_turnover = case_when(is.na(Apartment_number_of_sales) & 
-                                           is.na(House_number_of_sales) ~ NA_real_,
-                                         !is.na(Apartment_number_of_sales) & 
-                                           is.na(House_number_of_sales) ~ Apartment_number_of_sales,
-                                         is.na(Apartment_number_of_sales) & 
-                                           !is.na(House_number_of_sales) ~ House_number_of_sales,
-                                         !is.na(Apartment_number_of_sales) & 
-                                           !is.na(House_number_of_sales) ~ Apartment_number_of_sales + House_number_of_sales),
-             annual_turnover_proportion = annual_turnover / confirmed_dwellings,
-             median_house_price_less_land_value = House_median - Land_median)
+  master_raw_1 <- master_raw %>%
+    mutate(dwelling_density = confirmed_dwellings/suburb_area_sqkm,
+           annual_turnover = case_when(is.na(Apartment_number_of_sales) & 
+                                         is.na(House_number_of_sales) ~ NA_real_,
+                                       !is.na(Apartment_number_of_sales) & 
+                                         is.na(House_number_of_sales) ~ Apartment_number_of_sales,
+                                       is.na(Apartment_number_of_sales) & 
+                                         !is.na(House_number_of_sales) ~ House_number_of_sales,
+                                       !is.na(Apartment_number_of_sales) & 
+                                         !is.na(House_number_of_sales) ~ Apartment_number_of_sales + House_number_of_sales),
+           annual_turnover_proportion = annual_turnover / confirmed_dwellings,
+           median_house_price_less_land_value = House_median - Land_median)
     
-    write_rds(master_raw_1,"data/created/master.rds")
-    master <- readRDS("data/created/master.rds")
+  write_rds(master_raw_1,"data/created/master.rds")
+  master <- readRDS("data/created/master.rds")
   
   master_bio <- master %>% 
     map_df(~(data.frame(n_distinct = n_distinct(.x),
