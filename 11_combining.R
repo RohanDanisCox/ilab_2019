@@ -106,6 +106,8 @@
                                            year == 2018 & can_extrapolate == 0 ~ lag(interpolate_value,2),
                                            year == 2019 & can_extrapolate == 0 ~ lag(interpolate_value,3),
                                            TRUE ~ extrapolate_value)) %>% 
+      mutate(extrapolate_value = case_when(extrapolate_value < 0 ~ 0,
+                                           TRUE ~ extrapolate_value)) %>%
       ungroup()
     
     # Use the 2016 value for all years up to 2019
@@ -257,7 +259,7 @@
   ### Comments
   
   # Looks like there are still a lot of random issues in several fields:
-    # negative data from census - might be fixed by just fixing negative values in confirmed pop
+    # negative data from census - might be fixed by just fixing negative values in confirmed pop - fixed
     # Useless median values from locations where only a single sale occurred. What should be the minimum?
     # Still some outlier values which aren't helping.
   
