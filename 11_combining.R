@@ -56,6 +56,8 @@
     mutate(year = case_when(is.na(year) ~ 2019,
                             TRUE ~ year))
   
+  master_sales_by_year_raw <- readRDS("data/created/master_sales_by_year.rds") 
+  
 # [2] ---- Getting the years right ----
   year <- tibble(year = 1990:2019)
   
@@ -187,6 +189,10 @@
     left_join(metro_aria_year, by = c("suburb_code", "suburb_name", "year")) %>%
     select(-can_extrapolate)
   
+  sales_by_year <- suburbs %>%
+    left_join(master_sales_by_year_raw, by = c("suburb_code", "suburb_name", "year")) %>%
+    select(-can_extrapolate)
+  
   #Add back useful stuff to suburbs
   suburbs_add_back <- suburbs %>%
     left_join(suburb_2016, by = c("suburb_code", "suburb_name")) %>%
@@ -204,6 +210,7 @@
   write_rds(land_values,"data/created/ready_to_combine/land_values.rds")
   write_rds(annual_turnover,"data/created/ready_to_combine/annual_turnover.rds")
   write_rds(metro_aria,"data/created/ready_to_combine/metro_aria.rds")
+  write_rds(sales_by_year,"data/created/ready_to_combine/sales_by_year.rds")
   
   # Load ready data
   suburbs <- readRDS("data/created/ready_to_combine/suburbs.rds")
@@ -215,6 +222,7 @@
   land_values <- readRDS("data/created/ready_to_combine/land_values.rds")
   annual_turnover <- readRDS("data/created/ready_to_combine/annual_turnover.rds")
   metro_aria <- readRDS("data/created/ready_to_combine/metro_aria.rds")
+  sales_by_year <- readRDS("data/created/ready_to_combine/sales_by_year.rds")
   
 # [7] ---- Creating the master file ----
   
@@ -226,7 +234,8 @@
     left_join(seifa, by = c("suburb_code", "suburb_name", "year")) %>%
     left_join(land_values, by = c("suburb_code", "suburb_name", "year")) %>%
     left_join(annual_turnover, by = c("suburb_code", "suburb_name", "year")) %>%
-    left_join(metro_aria, by = c("suburb_code", "suburb_name", "year"))
+    left_join(metro_aria, by = c("suburb_code", "suburb_name", "year")) %>%
+    left_join(sales_by_year, by = c("suburb_code", "suburb_name", "year"))
   
   write_rds(master_raw,"data/created/master_raw.rds")
   master_raw <- readRDS("data/created/master_raw.rds")
@@ -256,13 +265,8 @@
   
   summary(master)
   
-  ### Comments
-  
-  # Looks like there are still a lot of random issues in several fields:
-    # negative data from census - might be fixed by just fixing negative values in confirmed pop - fixed
-    # Useless median values from locations where only a single sale occurred. What should be the minimum?
-    # Still some outlier values which aren't helping.
-  
+  # Save off to dropbox
+  drop_upload("data/created/master.rds", path = "ilab2019/master")
 
 # [XX] ---- Extra Redundant Functions ----
   

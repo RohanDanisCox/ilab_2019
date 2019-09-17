@@ -243,7 +243,7 @@
     select(-area_type)
   
   sales_1 <- sales %>%
-    filter(purchase_price > 1000) %>%
+    filter(purchase_price > 10000) %>%
     filter(!(is.na(house_number) & is.na(property_id))) %>%
     filter(contract_date > as.Date("1990/01/01") & contract_date < as.Date("2019/07/01")) %>% 
     filter(!(area == "(Missing)" & zone_code == "(Missing)" & zoning == "(Missing)" & is.na(primary_purpose))) %>%
@@ -280,22 +280,23 @@
     filter(!(is.na(primary_purpose) & str_detect(zone_description,"Commercial")))
   
   sales_5 <- sales_4 %>%
-    group_by(unit_number,house_number,street_name,suburb_name,contract_date,purchase_price) %>%
+    group_by(suburb_name,contract_date,purchase_price) %>%
     mutate(packaged_sale_n = n()) %>%
     ungroup()
-  
+
   sales_6 <- sales_5 %>%
     mutate(packaged_sale = case_when(packaged_sale_n >1 ~ "Yes",
                                      TRUE ~ "No"))
   
   sales_7 <- sales_6 %>%
-    mutate(new_price = case_when(purchase_price > 2000000 & packaged_sale == "Yes" ~ purchase_price/packaged_sale_n,
+    mutate(new_price = case_when(purchase_price > 2500000 & packaged_sale == "Yes" ~ purchase_price/packaged_sale_n,
                                       TRUE ~ NA_real_)) 
   
   sales_8 <- sales_7 %>%
-    filter(!(packaged_sale == "Yes" & property_type %in% c("House","Apartment") & new_price > 5000000)) 
+    filter((packaged_sale == "Yes" & property_type %in% c("House","Apartment") & new_price > 10000000)) 
   
-  sales_9 <- sales_8 %>%
+  sales_9 <- sales_7 %>%
+    anti_join(sales_8) %>%
     mutate(purchase_price = case_when(is.na(new_price)~purchase_price,
                                       TRUE ~ new_price)) %>%
     select(-new_price)
@@ -307,7 +308,9 @@
     filter(!(contract_date >= as.Date("2002-01-01") &
              purchase_price > 100000000 & 
              property_type %in% c("House","Apartment"))) %>%
-    filter(!(is.na(suburb_code)))
+    filter(!(is.na(suburb_code))) %>%
+    filter(!(is.na(property_id) & purchase_price > 2500000)) %>%
+    filter(purchase_price < 101000000)
   
   cleaned_sales_bio <- cleaned_sales %>% map_df(~(data.frame(n_distinct = n_distinct(.x),
                                                              class = class(.x),
@@ -323,6 +326,7 @@
 # [11] ---- Calculate a rolling median ----  
   
 # [11a] ---- Method 2 - duplicate the dataset across time windows and then group_by time window when calculating median ----
+  
   sales_subset <- cleaned_sales %>%
     select(quarter,contract_date, suburb_code, suburb_name, purchase_price,property_type) 
   
@@ -335,9 +339,13 @@
   df_3 <- sales_subset %>%
     mutate(target_date_window = quarter + months(6))
   
-  df_big <- bind_rows(df_1,df_2,df_3)
+  df_4 <- sales_subset %>%
+    mutate(target_date_window = quarter + months(9))
   
-  table(df_big$property_type)
+  df_9m <- bind_rows(df_1,df_2,df_3)
+  df_12m <- bind_rows(df_1,df_2,df_3,df_4)
+  
+  table(df_12m$property_type)
   
 # [11b] ---- Try using Multiplyr ----   
   
@@ -345,25 +353,48 @@
   cores <- detectCores()
   cluster <- new_cluster(cores)
 
-  # 
-  df_clustered <- df_big %>% 
+  # 9 and 12 month versions
+  df_9m_clustered <- df_9m %>% 
     group_by(suburb_code,suburb_name,target_date_window,property_type) %>% 
     partition(cluster)
-  df_clustered
+  df_9m_clustered
   
-  median_9m_window <- df_clustered %>%
+  median_9m_window <- df_9m_clustered %>%
     summarise(median = median(purchase_price),
               number_of_sales = n()) %>%
-    collect()
+    collect() %>%
+    ungroup() %>%
+    filter(number_of_sales >= 7)
+  
+  median_9m <- median_9m_window %>%
+    filter(target_date_window < as.Date("2019-07-02")) %>%
+    rename(quarter = target_date_window)
+  
+  df_12m_clustered <- df_12m %>% 
+    group_by(suburb_code,suburb_name,target_date_window,property_type) %>% 
+    partition(cluster)
+  df_12m_clustered
+  
+  median_12m_window <- df_12m_clustered %>%
+    summarise(median = median(purchase_price),
+              number_of_sales = n()) %>%
+    collect() %>%
+    ungroup() %>%
+    filter(number_of_sales >= 7)
+  
+  median_12m <- median_12m_window %>%
+    filter(target_date_window < as.Date("2019-07-02")) %>%
+    rename(quarter = target_date_window)
 
-  glebe_check <- median_9m_window %>%
-    filter(suburb_name == "Glebe (NSW)") %>%
+  glebe_check <- median_12m %>%
+    filter(suburb_name == "Darling Point") %>%
     filter(property_type != "Land")
   
-  ggplot(glebe_check,aes(target_date_window,median,colour = property_type)) +
+  ggplot(glebe_check,aes(quarter,median,colour = property_type)) +
     geom_line()
 
-  write_rds(median_9m_window,"data/created/median_9m_window.rds")
+  write_rds(median_9m,"data/created/median_9m_window.rds")
+  write_rds(median_12m,"data/created/median_12m_window.rds") ## 12 does seem to be a little less noisy
   
 # [12] ---- Get volume of sales per year to use for turnover statistics ----
   
@@ -381,6 +412,7 @@
               median = median(purchase_price)) %>%
     collect() %>%
     ungroup() %>%
+    filter(number_of_sales >= 7) %>%
     mutate(year = year(year))
   
   annual_turnover_1 <- annual_turnover %>%
@@ -390,7 +422,112 @@
 
   saveRDS(annual_turnover_1,"data/created/annual_turnover.rds")
   
-# [13] ---- Can start from here for land values ----  
+# [13] ---- Getting aggregate values for other groupings ----  
+  
+  suburbs <- readRDS("data/created/suburbs.rds")
+  
+  sa3 <- median_12m %>%
+    left_join(suburbs, by = c("suburb_code", "suburb_name")) %>%
+    group_by(sa3_code, sa3_name, quarter, property_type) %>%
+    summarise(sa3_average_median = mean(median,na.rm = TRUE))
+  
+  sa4 <- median_12m %>%
+    left_join(suburbs, by = c("suburb_code", "suburb_name")) %>%
+    group_by(sa4_code, sa4_name, quarter, property_type) %>%
+    summarise(sa4_average_median = mean(median,na.rm = TRUE))
+  
+  gccsa <-  median_12m %>%
+    left_join(suburbs, by = c("suburb_code", "suburb_name")) %>%
+    group_by(gccsa_code, gccsa_name, quarter, property_type) %>%
+    summarise(gccsa_average_median = mean(median,na.rm = TRUE))
+  
+  nsw <-  median_12m %>%
+    left_join(suburbs, by = c("suburb_code", "suburb_name")) %>%
+    group_by(state_code, state_name, quarter, property_type) %>%
+    summarise(nsw_average_median = mean(median,na.rm = TRUE))
+  
+  ggplot(nsw,aes(quarter,nsw_average_median,colour = property_type)) + 
+    geom_line()
+  
+  master_sales <- median_12m %>%
+    left_join(suburbs, by = c("suburb_code", "suburb_name")) %>%
+    select(1:6,12:19) %>%
+    left_join(sa3, by = c("quarter", "property_type", "sa3_code", "sa3_name")) %>%
+    left_join(sa4, by = c("quarter", "property_type", "sa4_code", "sa4_name")) %>%
+    left_join(gccsa, by = c("quarter", "property_type", "gccsa_code", "gccsa_name")) %>%
+    left_join(nsw,  by = c("quarter", "property_type", "state_code", "state_name")) %>%
+    mutate(dif_sa3 = median - sa3_average_median,
+           per_dif_sa3 = dif_sa3 / sa3_average_median,
+           dif_sa4 = median - sa4_average_median,
+           per_dif_sa4 = dif_sa4 / sa4_average_median,
+           dif_gccsa = median - gccsa_average_median,
+           per_dif_gccsa = dif_gccsa / gccsa_average_median,
+           dif_nsw = median - nsw_average_median,
+           per_dif_nsw = dif_nsw / nsw_average_median)
+  
+  saveRDS(master_sales,"data/created/master_sales.rds")
+  
+  house_master_sales_by_year <- master_sales %>%
+    filter(property_type == "House") %>%
+    mutate(year = year(quarter)) %>%
+    group_by(suburb_code,suburb_name,year) %>%
+    summarise(house_median_suburb = mean(median,na.rm = TRUE),
+              house_median_sa3 = mean(sa3_average_median, na.rm = TRUE),
+              house_median_sa4 = mean(sa4_average_median, na.rm = TRUE),
+              house_median_gccsa = mean(gccsa_average_median, na.rm = TRUE),
+              house_median_nsw = mean(nsw_average_median, na.rm = TRUE),
+              house_dif_sa3 = mean(median) - mean(sa3_average_median),
+              house_per_dif_sa3 = house_dif_sa3 / mean(sa3_average_median),
+              house_dif_sa4 = mean(median) - mean(sa4_average_median),
+              house_per_dif_sa4 = house_dif_sa4 / mean(sa4_average_median),
+              house_dif_gccsa = mean(median) - mean(gccsa_average_median),
+              house_per_dif_gccsa = house_dif_gccsa / mean(gccsa_average_median),
+              house_dif_nsw = mean(median) - mean(nsw_average_median),
+              house_per_dif_nsw = house_dif_nsw / mean(nsw_average_median))
+  
+  apartment_master_sales_by_year <- master_sales %>%
+    filter(property_type == "Apartment") %>%
+    mutate(year = year(quarter)) %>%
+    group_by(suburb_code,suburb_name,year) %>%
+    summarise(apartment_median_suburb = mean(median,na.rm = TRUE),
+              apartment_median_sa3 = mean(sa3_average_median, na.rm = TRUE),
+              apartment_median_sa4 = mean(sa4_average_median, na.rm = TRUE),
+              apartment_median_gccsa = mean(gccsa_average_median, na.rm = TRUE),
+              apartment_median_nsw = mean(nsw_average_median, na.rm = TRUE),
+              apartment_dif_sa3 = mean(median) - mean(sa3_average_median),
+              apartment_per_dif_sa3 = apartment_dif_sa3 / mean(sa3_average_median),
+              apartment_dif_sa4 = mean(median) - mean(sa4_average_median),
+              apartment_per_dif_sa4 = apartment_dif_sa4 / mean(sa4_average_median),
+              apartment_dif_gccsa = mean(median) - mean(gccsa_average_median),
+              apartment_per_dif_gccsa = apartment_dif_gccsa / mean(gccsa_average_median),
+              apartment_dif_nsw = mean(median) - mean(nsw_average_median),
+              apartment_per_dif_nsw = apartment_dif_nsw / mean(nsw_average_median))
+   
+  land_master_sales_by_year <- master_sales %>%
+    filter(property_type == "Land") %>%
+    mutate(year = year(quarter)) %>%
+    group_by(suburb_code,suburb_name,year) %>%
+    summarise(land_median_suburb = mean(median,na.rm = TRUE),
+              land_median_sa3 = mean(sa3_average_median, na.rm = TRUE),
+              land_median_sa4 = mean(sa4_average_median, na.rm = TRUE),
+              land_median_gccsa = mean(gccsa_average_median, na.rm = TRUE),
+              land_median_nsw = mean(nsw_average_median, na.rm = TRUE),
+              land_dif_sa3 = mean(median) - mean(sa3_average_median),
+              land_per_dif_sa3 = land_dif_sa3 / mean(sa3_average_median),
+              land_dif_sa4 = mean(median) - mean(sa4_average_median),
+              land_per_dif_sa4 = land_dif_sa4 / mean(sa4_average_median),
+              land_dif_gccsa = mean(median) - mean(gccsa_average_median),
+              land_per_dif_gccsa = land_dif_gccsa / mean(gccsa_average_median),
+              land_dif_nsw = mean(median) - mean(nsw_average_median),
+              land_per_dif_nsw = land_dif_nsw / mean(nsw_average_median))
+  
+  master_sales_by_year <- house_master_sales_by_year %>%
+    full_join(apartment_master_sales_by_year, by = c("suburb_code", "suburb_name", "year")) %>%
+    full_join(land_master_sales_by_year,by = c("suburb_code", "suburb_name", "year"))
+  
+  saveRDS(master_sales_by_year,"data/created/master_sales_by_year.rds")
+  
+# [14] ---- Can start from here for land values ----  
   
   matched_land_value <- readRDS("data/land_value/matched_land_value.rds")
   
@@ -430,7 +567,7 @@
   
   saveRDS(land_value_2,"data/created/land_value_cleaned.rds")
   
-  # [14] ---- Start here with cleaned land_values ---- 
+# [15] ---- Start here with cleaned land_values ---- 
   
   land_value_cleaned <- readRDS("data/created/land_value_cleaned.rds")
   
