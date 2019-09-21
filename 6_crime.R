@@ -110,6 +110,27 @@
     left_join(suburb_code, by = "suburb_name") %>%
     select(8,1:7)
 
+# [6] ---- extrapolate to 2019  ----
+  
+  extrapolate_function <- function(df,var){
+    quo_var <- enquo(var)
+  data %>%
+    nest(-c(suburb_code,suburb_name)) %>%
+    mutate(fit = map(data, ~ lm(!!quo_var ~ year, data = .x)), # Fitting a simple linear model to the interpolated values by year
+           prediction = map2(fit,data,predict)) %>% # Get predictions based on this model for all years
+    unnest(prediction,data) %>%
+    mutate(prediction = prediction)
+  }
+  
+  extrapolate_function <- crime_score1 %>%
+      nest(-c(suburb_code,suburb_name)) %>%
+      mutate(fit = map(crime_score1$violent_crime, ~ lm(violent_crime ~ year, data = crime_score1)))
+  , # Fitting a simple linear model to the interpolated values by year
+             prediction = map2(fit,crime_score1,predict)) %>% # Get predictions based on this model for all years
+      unnest(prediction,data) %>%
+      mutate(prediction = prediction)
+  }
+  check <- extrapolate_function(crime_score1,violent_crime)
 # [6] ---- Save off crime score ----
 
 write_rds(crime_score1,"data/created/crime_score.rds")

@@ -175,7 +175,7 @@
 # [5] ---- Combine suburbs with the remaining scores ----
   
   crime <- crime_score %>%
-    select(suburb_code,suburb_name,year,crime_score = log_crime_score)
+    select(suburb_code,suburb_name,year,crime_score = log_crime_score) # NEED TO MAKE A CHANGE HERE
   
   education <- suburbs %>%
     left_join(education_score, by = c("suburb_code", "suburb_name")) %>%
