@@ -91,7 +91,52 @@
     left_join(dasg_crime_suburb, by = c("suburb_name", "year")) %>%
     left_join(other_crime_suburb, by = c("suburb_name", "year"))
   
-  crime_score <- overall_crime %>%
+  crime_2019 <- overall_crime %>%
+    distinct(suburb_name) %>%
+    mutate(year = 2019) %>%
+    bind_rows(overall_crime)
+
+  violent_crime_2019 <- crime_2019 %>%
+    select(suburb_name,year,violent_crime) %>%
+    nest(-suburb_name) %>%
+    mutate(fit = map(data, ~ lm(violent_crime ~ year, data = .x)), 
+           prediction = map2(fit,data,predict)) %>% 
+    unnest(prediction,data) %>%
+    mutate(violent_crime = case_when(year < 2019 ~ violent_crime,
+                                     year == 2019 & prediction < 0 ~ 0,
+                                     year == 2019 & prediction > 0 ~ round(prediction,0))) %>%
+    select(suburb_name,year,violent_crime)
+  
+  dasg_crime_2019 <- crime_2019 %>%
+    select(suburb_name,year,dasg_crime) %>%
+    nest(-suburb_name) %>%
+    mutate(fit = map(data, ~ lm(dasg_crime ~ year, data = .x)), 
+           prediction = map2(fit,data,predict)) %>% 
+    unnest(prediction,data) %>%
+    mutate(dasg_crime = case_when(year < 2019 ~ dasg_crime,
+                                     year == 2019 & prediction < 0 ~ 0,
+                                     year == 2019 & prediction > 0 ~ round(prediction,0))) %>%
+    select(suburb_name,year,dasg_crime)
+
+  other_crime_2019 <- crime_2019 %>%
+    select(suburb_name,year,other_crime) %>%
+    nest(-suburb_name) %>%
+    mutate(fit = map(data, ~ lm(other_crime ~ year, data = .x)), 
+           prediction = map2(fit,data,predict)) %>% 
+    unnest(prediction,data) %>%
+    mutate(other_crime = case_when(year < 2019 ~ other_crime,
+                                     year == 2019 & prediction < 0 ~ 0,
+                                     year == 2019 & prediction > 0 ~ round(prediction,0))) %>%
+    select(suburb_name,year,other_crime)
+  
+  overall_crime1  <- violent_crime_2019 %>%
+    left_join(dasg_crime_2019, by = c("suburb_name", "year")) %>%
+    left_join(other_crime_2019, by = c("suburb_name", "year"))  %>%
+    mutate(violent_crime = ifelse(is.na(violent_crime), 0, violent_crime)) %>%
+    mutate(dasg_crime = ifelse(is.na(dasg_crime), 0, dasg_crime)) %>%
+    mutate(other_crime = ifelse(is.na(other_crime), 0, other_crime)) 
+  
+  crime_score <- overall_crime1 %>%
     mutate(crime_score = (10*violent_crime)+(5*dasg_crime)+other_crime) %>%
     mutate(log_crime_score = case_when(crime_score == 0 ~ 0,
                                        crime_score >=1 ~ 1+log(crime_score)))
@@ -110,27 +155,6 @@
     left_join(suburb_code, by = "suburb_name") %>%
     select(8,1:7)
 
-# [6] ---- extrapolate to 2019  ----
-  
-  extrapolate_function <- function(df,var){
-    quo_var <- enquo(var)
-  data %>%
-    nest(-c(suburb_code,suburb_name)) %>%
-    mutate(fit = map(data, ~ lm(!!quo_var ~ year, data = .x)), # Fitting a simple linear model to the interpolated values by year
-           prediction = map2(fit,data,predict)) %>% # Get predictions based on this model for all years
-    unnest(prediction,data) %>%
-    mutate(prediction = prediction)
-  }
-  
-  extrapolate_function <- crime_score1 %>%
-      nest(-c(suburb_code,suburb_name)) %>%
-      mutate(fit = map(crime_score1$violent_crime, ~ lm(violent_crime ~ year, data = crime_score1)))
-  , # Fitting a simple linear model to the interpolated values by year
-             prediction = map2(fit,crime_score1,predict)) %>% # Get predictions based on this model for all years
-      unnest(prediction,data) %>%
-      mutate(prediction = prediction)
-  }
-  check <- extrapolate_function(crime_score1,violent_crime)
 # [6] ---- Save off crime score ----
 
 write_rds(crime_score1,"data/created/crime_score.rds")
