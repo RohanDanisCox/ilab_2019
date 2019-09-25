@@ -30,7 +30,6 @@
   crimescore <- readRDS("data/created/crime_score.rds")
   suburbs <- readRDS("data/created/suburbs.rds")
   
-  
   # Visualise Green Score
   
   sydney_only <- suburbs %>%
