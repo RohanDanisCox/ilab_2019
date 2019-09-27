@@ -1,5 +1,5 @@
 
-# INVESTIGATIONS APP
+# INVESTIGATIONS APP - useful video here: https://vimeo.com/rstudioinc/review/131218530/212d8a5a7a/#t=42m2s 
 
 # [0] ---- Load packages ----
 library(shiny)
