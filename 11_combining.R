@@ -160,12 +160,27 @@
  ## SEIFA data - as S
   
   s1 <- interpolate_extrapolate_lag(seifa_scores, usual_resident_population)
+  
+  # Need usual_resident_population to be extended back in time in order allow for weighted means calculations
+  s1_2 <- s1 %>%
+    nest(-c(suburb_code,suburb_name)) %>%
+    mutate(fit = map(data, ~ lm(usual_resident_population ~ year, data = .x)), 
+           prediction = map2(fit,data,predict)) %>% 
+    unnest(prediction,data) %>%
+    mutate(prediction = prediction)
+  
+  s1_3 <- s1_2 %>%
+    mutate(usual_resident_population = case_when(is.na(usual_resident_population) & prediction > 0 ~ prediction,
+                                                 is.na(usual_resident_population) & prediction <= 0 ~ 0,
+                                                 TRUE ~ usual_resident_population)) %>%
+    select(suburb_code,suburb_name,year,usual_resident_population)
+  
   s2 <- interpolate_extrapolate_lag(seifa_scores, relative_socio_economic_disadvantage_index)
   s3 <- interpolate_extrapolate_lag(seifa_scores, relative_socio_economic_adv_disadv_index)
   s4 <- interpolate_extrapolate_lag(seifa_scores, economic_resources_index)
   s5 <- interpolate_extrapolate_lag(seifa_scores, education_and_occupation_index)
   
-  seifa <- s1 %>%
+  seifa <- s1_3 %>%
     left_join(s2,by = c("suburb_code", "suburb_name", "year")) %>%
     left_join(s3,by = c("suburb_code", "suburb_name", "year")) %>%
     left_join(s4,by = c("suburb_code", "suburb_name", "year")) %>%
@@ -182,7 +197,7 @@
   
   green <- suburbs %>%
     left_join(green_score, by = c("suburb_code", "suburb_name")) %>%
-    select(suburb_code,suburb_name,year, green_score)
+    select(suburb_code,suburb_name,year, green_score, green_score_decile)
   
   metro_aria <- suburbs %>%
     left_join(metro_aria_year, by = c("suburb_code", "suburb_name", "year")) %>%

@@ -11,6 +11,10 @@ library(shinycssloaders)
 # [1] ---- Load global data ----
     suburb_data <- readRDS("data/suburb_data.rds")
     
+    sa3_data <- readRDS("data/sa3_data.rds")
+    
+    sa4_data <- readRDS("data/sa4_data.rds")
+    
     nsw_data <- readRDS("data/nsw_data.rds")
     
     choices <- readRDS("data/choices.rds")
@@ -30,7 +34,7 @@ library(shinycssloaders)
                                       htmlOutput("sa3_selector"),
                                       htmlOutput("suburb_selector"),
                                       htmlOutput("variable_selector"),
-                                      withSpinner(plotOutput("plot_3", height = "280px"))
+                                      withSpinner(plotOutput("plot_3", height = "320px"))
                                       ),
                                   # Show a plot of the generated distribution
                                   mainPanel(
@@ -80,7 +84,6 @@ library(shinycssloaders)
                         selected = 1)
         })
         
-        
         output$sa3_selector = renderUI({
             selectInput(inputId = "sa3", #name of input
                         label = "SA3:", #label displayed in UI
@@ -96,27 +99,50 @@ library(shinycssloaders)
         output$variable_selector = renderUI({
             selectInput(inputId = "variable",
                         label = "Variable:",
-                        choices = suburb_data %>% select(8:22) %>% names(),
+                        choices = suburb_data %>% select(8:40) %>% names(),
                         selected = 1)
         })
         
         # get the reactive values which will be used in the plots
         
-        plot_data <- reactive({suburb_data %>%
+        suburb_plot_data <- reactive({suburb_data %>%
                 filter(suburb_name == input$suburb)})
+        
+        sa3_plot_data <- reactive({sa3_data %>%
+                filter(sa3_name == input$sa3)})
+        
+        sa4_plot_data <- reactive({sa4_data %>%
+                filter(sa4_name == input$sa4)})
         
         # create the plots
         
         output$plot_1 <- renderPlot({
-            ggplot(plot_data(),aes_string(x = "year",y = input$variable)) +
-                geom_line() +
-                geom_line(data = nsw_data,mapping = aes_string(x = "year",y = input$variable), colour = "red")
+            ggplot(suburb_plot_data(),aes(x = year,y = !!as.symbol(input$variable),colour="black")) +
+                geom_line(size = 2) +
+                geom_line(data = sa3_plot_data(),
+                          mapping = aes(x = year,y = !!as.symbol(input$variable), colour = "blue"),
+                          linetype = "dashed") +
+                geom_line(data = sa4_plot_data(),
+                          mapping = aes(x = year,y = !!as.symbol(input$variable), colour = "darkgreen"),
+                          linetype = "dashed") +
+                geom_line(data = nsw_data,
+                          mapping = aes(x = year,y = !!as.symbol(input$variable), colour = "red"),
+                          linetype = "dashed") +
+                theme_minimal(base_size = 16) +
+                scale_color_identity(name = "Geography",
+                                     breaks = c("black","blue","darkgreen","red"),
+                                     labels = c("Suburb","SA3","SA4","NSW"),
+                                     guide = "legend") + 
+                labs(x = "Year", y = as.character(input$variable))
         })
         
         output$plot_2 <- renderPlot({
-            ggplot(suburb_data,aes_string(input$variable)) +
+            ggplot(suburb_data,aes(!!as.symbol(input$variable))) +
                 geom_density() +
-                geom_vline(data = plot_data(),aes_string(xintercept = input$variable), color = "#FC4E08", linetype = "dashed", size = 1)
+                geom_vline(data = suburb_plot_data(),
+                           aes(xintercept = !!as.symbol(input$variable)), 
+                           color = "#FC4E08", linetype = "dashed", size = 1)+
+                theme_minimal(base_size = 16)
         })
         
         output$plot_3 <- renderPlot({
