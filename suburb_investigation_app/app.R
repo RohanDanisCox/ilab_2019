@@ -3,107 +3,133 @@
 
 # [0] ---- Load packages ----
 library(shiny)
-library(tidyverse)
+library(sf)
+library(dplyr)
+library(ggplot2)
+library(shinycssloaders)
 
 # [1] ---- Load global data ----
-    master <- readRDS("data/master.rds") %>% 
-        filter(!gccsa_code %in% c(19499,19799))
+    suburb_data <- readRDS("data/suburb_data.rds")
     
-    nsw_results <- readRDS("data/nsw_results.rds")
+    nsw_data <- readRDS("data/nsw_data.rds")
+    
+    choices <- readRDS("data/choices.rds")
     
     map <- readRDS("data/map.rds")
 
 # [2] ---- Define UI for application ----
-    ui <- fluidPage(
-        
-        # Application title
-        titlePanel("Suburb Investigator"),
-        
-        # Select Box
-        sidebarLayout(
-            sidebarPanel(
-                htmlOutput("gccsa_selector"),
-                htmlOutput("sa4_selector"),
-                htmlOutput("sa3_selector"),
-                htmlOutput("suburb_selector"),
-                htmlOutput("variable_selector")
-            ),
-            
-            # Show a plot of the generated distribution
-            mainPanel(
-                plotOutput("plot_1", height = "280px"),
-                plotOutput("plot_2", height = "280px"),
-                plotOutput("plot_3", height = "280px")
-            )
-        )
-    )
+    ui <- navbarPage("Suburb Investigator",
+                     tabPanel("Introduction",
+                              titlePanel("Welcome to the Suburb Investigator"),
+                              fluidRow(column(12,
+                                              includeMarkdown("data/test.Rmd")))),
+                     tabPanel("Investigator",
+                              sidebarLayout(
+                                  sidebarPanel(
+                                      htmlOutput("sa4_selector"),
+                                      htmlOutput("sa3_selector"),
+                                      htmlOutput("suburb_selector"),
+                                      htmlOutput("variable_selector"),
+                                      withSpinner(plotOutput("plot_3", height = "280px"))
+                                      ),
+                                  # Show a plot of the generated distribution
+                                  mainPanel(
+                                      withSpinner(plotOutput("plot_1", height = "350px")),
+                                      withSpinner(plotOutput("plot_2", height = "350px"))
+                                      )
+                                  )
+                              )
+                     )
 
 # [3] ---- Define server logic ----
     
     server <- function(input, output) {
         
-        output$gccsa_selector = renderUI({
-            selectInput(inputId = "gccsa", #name of input
-                        label = "GCCSA:", #label displayed in UI
-                        choices = master %>% distinct(gccsa_name) %>% arrange(gccsa_name), # calls unique values from subset
-                        selected = 1)
-        })
-        
+        # create reactive input values 
         output$sa4_selector = renderUI({
             selectInput(inputId = "sa4", #name of input
                         label = "SA4:", #label displayed in UI
-                        choices = master %>% filter(gccsa_name == input$gccsa) %>% distinct(sa4_name) %>% arrange(sa4_name), # calls unique values from subset
+                        choices = list("Greater Sydney" = list("Central Coast",
+                                                               "Sydney - Baulkham Hills and Hawkesbury",
+                                                               "Sydney - Blacktown",
+                                                               "Sydney - City and Inner South",
+                                                               "Sydney - Eastern Suburbs",
+                                                               "Sydney - Inner South West",
+                                                               "Sydney - Inner West",                   
+                                                               "Sydney - North Sydney and Hornsby",
+                                                               "Sydney - Northern Beaches",           
+                                                               "Sydney - Outer South West",
+                                                               "Sydney - Outer West and Blue Mountains",
+                                                               "Sydney - Parramatta",                  
+                                                               "Sydney - Ryde",          
+                                                               "Sydney - South West",
+                                                               "Sydney - Sutherland"),
+                                       "Rest of NSW" = list("Capital Region",
+                                                            "Central West", 
+                                                            "Coffs Harbour - Grafton",
+                                                            "Far West and Orana",
+                                                            "Hunter Valley exc Newcastle",    
+                                                            "Illawarra",                         
+                                                            "Mid North Coast",            
+                                                            "Murray",                          
+                                                            "New England and North West",            
+                                                            "Newcastle and Lake Macquarie",       
+                                                            "Richmond - Tweed",                     
+                                                            "Riverina",                         
+                                                            "Southern Highlands and Shoalhaven")),
                         selected = 1)
         })
+        
+        
         output$sa3_selector = renderUI({
             selectInput(inputId = "sa3", #name of input
                         label = "SA3:", #label displayed in UI
-                        choices = master %>% filter(sa4_name == input$sa4) %>% distinct(sa3_name) %>% arrange(sa3_name),
+                        choices = choices %>% filter(sa4_name == input$sa4) %>% distinct(sa3_name) %>% arrange(sa3_name),
                         selected = 1)
         })
         output$suburb_selector = renderUI({
             selectInput(inputId = "suburb",
                         label = "Suburb:",
-                        choices = master %>% filter(sa3_name == input$sa3) %>% distinct(suburb_name) %>% arrange(suburb_name),
+                        choices = choices %>% filter(sa3_name == input$sa3) %>% distinct(suburb_name) %>% arrange(suburb_name),
                         selected = 1)
         })
         output$variable_selector = renderUI({
             selectInput(inputId = "variable",
                         label = "Variable:",
-                        choices = master %>% select(19:99) %>% names(),
+                        choices = suburb_data %>% select(8:22) %>% names(),
                         selected = 1)
         })
         
+        # get the reactive values which will be used in the plots
+        
+        plot_data <- reactive({suburb_data %>%
+                filter(suburb_name == input$suburb)})
+        
+        # create the plots
+        
         output$plot_1 <- renderPlot({
-            
-            plot_data <- master %>%
-                filter(suburb_name == input$suburb)
-            
-            ggplot(plot_data,aes_string(x = "year",y = input$variable)) +
+            ggplot(plot_data(),aes_string(x = "year",y = input$variable)) +
                 geom_line() +
-                geom_line(data = nsw_results,mapping = aes_string(x = "year",y = input$variable), colour = "red")
+                geom_line(data = nsw_data,mapping = aes_string(x = "year",y = input$variable), colour = "red")
         })
         
         output$plot_2 <- renderPlot({
-            
-            plot_data <- master %>%
-                filter(suburb_name == input$suburb)
-            
-            ggplot(master,aes_string(input$variable)) +
+            ggplot(suburb_data,aes_string(input$variable)) +
                 geom_density() +
-                geom_vline(data = plot_data,aes_string(xintercept = input$variable), color = "#FC4E08", linetype = "dashed", size = 1)
+                geom_vline(data = plot_data(),aes_string(xintercept = input$variable), color = "#FC4E08", linetype = "dashed", size = 1)
         })
         
         output$plot_3 <- renderPlot({
             
             map_subset <- map %>%
                 filter(sa4_name == input$sa4) %>%
-                mutate(suburb = case_when(suburb_name == input$suburb ~ "Yes",
+                mutate(fill = case_when(suburb_name == input$suburb ~ "suburb",
+                                          suburb_name != input$suburb & sa3_name == input$sa3 ~ "sa3",
                                           TRUE ~ "No"))
             
             ggplot() +
-                geom_sf(data = map_subset, aes(fill = suburb)) +
-                scale_fill_manual(values = c("white","red"), guide = FALSE)
+                geom_sf(data = map_subset, aes(fill = fill)) +
+                scale_fill_manual(values = c("white","pink","red"), guide = FALSE)
             
         })
     }
