@@ -1,7 +1,29 @@
-library(tidyr)
+# Visualisations
 
-## APP support
+# [0] ---- Load packages ----
 
+  library(readr)
+  library(tidyverse)
+  library(rdrop2)
+  library(feather)
+  library(httpuv)
+  library(sp)
+  library(rgdal)
+  library(rgeos)
+  library(maptools)
+  library(ggmap)
+  library(broom)
+  library(sf)
+  library(RColorBrewer)
+  library(mapview)
+  library(leaflet)
+  library(leafpop)
+
+# [1] ---- Suburb_Investigation App ----
+
+# [1a] ---- Obtain Data and Add to Data File ----
+
+  # Obtain choice options - distinct suburb names to choose from
   master <- readRDS("data/created/master.rds")
   
   choices <- master %>%
@@ -9,68 +31,30 @@ library(tidyr)
   
   saveRDS(choices, "suburb_investigation_app/data/choices.rds")
 
-map <- readRDS("data/nsw_sa4.rds")
-
-nsw <- read_sf("data/shapefiles/2016") %>%
-  filter(STE_CODE16 == 1)
-
-suburbs <- readRDS("data/created/suburbs.rds")
-
-suburbs1 <- suburbs %>%
-  select(suburb_code,suburb_name,sa3_code,sa3_name,sa4_code,sa4_name)
-
-nsw1 <- nsw %>% 
-  mutate(suburb_code = as.numeric(SSC_CODE16),
-         suburb_name = SSC_NAME16,
-         area = AREASQKM16) %>%
-  select(suburb_code,suburb_name,area)
-
-map <- nsw1 %>%
-  left_join(suburbs1) %>%
-  select(suburb_code,suburb_name,sa3_code,sa3_name,sa4_code,sa4_name,area)
-
-saveRDS(map, "suburb_investigation_app/data/map.rds")
-
-haberfield <- map %>%
-  filter(sa4_name == "Sydney - Inner West") %>%
-  mutate(fill = case_when(suburb_name == "Haberfield" ~ "suburb",
-                          suburb_name != "Haberfield" & sa3_name == "Strathfield - Burwood - Ashfield" ~ "sa3",
-                          TRUE ~ "No"))
-
-
-ggplot() +
-  geom_sf(data = haberfield, aes(fill = fill)) +
-  scale_fill_manual(values = c("white","pink","red"), guide = FALSE)
-
-
-
-
-haberfield <- master %>%
-  filter(suburb_name == "Haberfield")
-
-ggplot(haberfield,aes(x = year,y = house_median_suburb)) +
-  geom_line(colour = "blue", linetype = "dashed") + 
-  geom_line(data = haberfield,mapping = aes(x = year, y = house_median_nsw),colour = "red",linetype = "dotted") + 
-  theme_minimal(base_size = 16) +
-  scale_color_identity(name = "Model fit",
-                       breaks = c("black", "red", "blue"),
-                       labels = c("Linear", "Quadratic", "Cubic"),
-                       guide = "legend")
-
-ggplot(haberfield,aes(x = year,y = house_median_suburb,colour = "black")) +
-  geom_line(linetype = "dashed") + 
-  geom_line(data = haberfield,mapping = aes(x = year, y = house_median_nsw, colour = "red"),linetype = "dotted") + 
-  theme_minimal(base_size = 16) +
-  scale_color_identity(name = "Geography",
-                       breaks = c("black", "red"),
-                       labels = c("Suburb", "NSW"),
-                       guide = "legend") + 
-  labs(Title = "Variable over time", x = "Year", y = as.character()) 
-
-?labs
-# Building the data files which will be used for the suburb_investigator_app
-
-  #The master file should be only data points that matter
+  # Obtain map file
+  nsw <- read_sf("data/shapefiles/2016") %>%
+    filter(STE_CODE16 == 1)
+  
+  suburbs <- readRDS("data/created/suburbs.rds")
+  
+  suburbs1 <- suburbs %>%
+    select(suburb_code,suburb_name,sa3_code,sa3_name,sa4_code,sa4_name)
+  
+  nsw1 <- nsw %>% 
+    mutate(suburb_code = as.numeric(SSC_CODE16),
+           suburb_name = SSC_NAME16,
+           area = AREASQKM16) %>%
+    select(suburb_code,suburb_name,area)
+  
+  map <- nsw1 %>%
+    left_join(suburbs1) %>%
+    select(suburb_code,suburb_name,sa3_code,sa3_name,sa4_code,sa4_name,area)
+  
+  saveRDS(map, "suburb_investigation_app/data/map.rds")
+  
+  # Obtaining the data files 
+  
+  # The master file should be only data points that matter
   suburb_data <- master %>%
     filter(!gccsa_code %in% c(19499,19799))
   
@@ -115,9 +99,9 @@ ggplot(haberfield,aes(x = year,y = house_median_suburb,colour = "black")) +
            Dwelling_Density = dwelling_density,
            Annual_Turnover = annual_turnover,
            Proportion_of_Annual_Turnover = annual_turnover_proportion)
-
+  
   saveRDS(suburb_data_ready, "suburb_investigation_app/data/suburb_data.rds")
-
+  
   nsw_data <- suburb_data %>%
     group_by(year) %>%
     summarise(Crime = weighted.mean(log_crime_score, usual_resident_population, na.rm = TRUE), 
@@ -155,7 +139,7 @@ ggplot(haberfield,aes(x = year,y = house_median_suburb,colour = "black")) +
               Proportion_of_Annual_Turnover = weighted.mean(annual_turnover_proportion, usual_resident_population, na.rm = TRUE))
   
   saveRDS(nsw_data, "suburb_investigation_app/data/nsw_data.rds")
-
+  
   sa4_data <- suburb_data %>%
     group_by(sa4_name,year) %>%
     summarise(Crime = weighted.mean(log_crime_score, usual_resident_population, na.rm = TRUE), 
@@ -231,15 +215,50 @@ ggplot(haberfield,aes(x = year,y = house_median_suburb,colour = "black")) +
               Proportion_of_Annual_Turnover = weighted.mean(annual_turnover_proportion, usual_resident_population, na.rm = TRUE))
   
   saveRDS(sa3_data, "suburb_investigation_app/data/sa3_data.rds")
+
+# [1b] ---- Testing Objects ----
+
+  haberfield <- map %>%
+    filter(sa4_name == "Sydney - Inner West") %>%
+    mutate(fill = case_when(suburb_name == "Haberfield" ~ "suburb",
+                            suburb_name != "Haberfield" & sa3_name == "Strathfield - Burwood - Ashfield" ~ "sa3",
+                            TRUE ~ "No"))
+    
+  ggplot() +
+    geom_sf(data = haberfield, aes(fill = fill)) +
+    scale_fill_manual(values = c("white","pink","red"), guide = FALSE)
   
-names(master)
-
-
-# Fixing choices
-
-
-# usual_resident_population
-
-check <- suburb_data %>%
-  select(suburb_code,suburb_name,year,usual_resident_population)
+  haberfield <- master %>%
+    filter(suburb_name == "Haberfield")
   
+  ggplot(haberfield,aes(x = year,y = house_median_suburb)) +
+    geom_line(colour = "blue", linetype = "dashed") + 
+    geom_line(data = haberfield,mapping = aes(x = year, y = house_median_nsw),colour = "red",linetype = "dotted") + 
+    theme_minimal(base_size = 16) +
+    scale_color_identity(name = "Model fit",
+                         breaks = c("black", "red", "blue"),
+                         labels = c("Linear", "Quadratic", "Cubic"),
+                         guide = "legend")
+  
+  ggplot(haberfield,aes(x = year,y = house_median_suburb,colour = "black")) +
+    geom_line(linetype = "dashed") + 
+    geom_line(data = haberfield,mapping = aes(x = year, y = house_median_nsw, colour = "red"),linetype = "dotted") + 
+    theme_minimal(base_size = 16) +
+    scale_color_identity(name = "Geography",
+                         breaks = c("black", "red"),
+                         labels = c("Suburb", "NSW"),
+                         guide = "legend") + 
+    labs(Title = "Variable over time", x = "Year", y = as.character()) 
+
+  # [2] ---- Leaflet Investigation App ----
+  
+  # [2a] ---- Obtain Data and Add to Data File ----
+
+  nsw <- read_sf("data/shapefiles/2016") %>%
+    filter(STE_CODE16 == 1)
+  
+  # [2b] ---- Testing Objects ----
+
+  leaflet(nsw) %>%
+    addTiles() %>%
+    setView(146.9211,-32.2532, zoom = 5.5)
