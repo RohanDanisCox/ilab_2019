@@ -7,6 +7,7 @@ library(sf)
 library(dplyr)
 library(ggplot2)
 library(shinycssloaders)
+library(markdown)
 
 # [1] ---- Load global data ----
     suburb_data <- readRDS("data/suburb_data.rds")
