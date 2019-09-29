@@ -272,12 +272,20 @@
     filter(!gccsa_code %in% c(19499,19799))
   
   suburb_subset <- suburb_data %>%
-    select(suburb_code,suburb_name,year, log_crime_score,education_score,green_score_decile) %>%
+    select(suburb_code,suburb_name,year,
+           log_crime_score,education_score,green_score_decile,
+           working_age_proportion,public_transport_proportion,
+           house_and_semi_proportion,economic_resources_index,
+           median_land_value_per_sqm,house_median_suburb) %>%
     filter(year == 2019)
   
   map <- nsw %>%
     left_join(suburb_subset, by = c("suburb_code", "suburb_name")) %>%
-    select(suburb_code,suburb_name,log_crime_score,education_score, green_score_decile)
+    select(suburb_code,suburb_name,
+           log_crime_score,education_score,green_score_decile,
+           working_age_proportion,public_transport_proportion,
+           house_and_semi_proportion,economic_resources_index,
+           median_land_value_per_sqm,house_median_suburb)
   
   ## Trying to simplify object
   
@@ -295,12 +303,109 @@
     addTiles() %>%
     setView(146.9211,-32.2532, zoom = 5.5)
   
-  leaflet(simple_map) %>%
+  # Set up the colours
+  pal_crime <- colorNumeric(
+    palette = c("white","darkred"),
+    domain = simple_map$log_crime_score)
+  
+  pal_education <- colorNumeric(
+    palette = c("white","darkgreen"),
+    domain = simple_map$education_score)
+  
+  pal_green_space <- colorNumeric(
+    palette = c("white","darkgreen"),
+    domain = simple_map$green_score_decile)
+  
+  pal_working_age <- colorNumeric(
+    palette = c("white","darkblue"),
+    domain = simple_map$working_age_proportion)
+  
+  pal_pubic_transport <- colorNumeric(
+    palette = c("white","darkgreen"),
+    domain = simple_map$public_transport_proportion)
+  
+  pal_house <- colorNumeric(
+    palette = c("white","purple"),
+    domain = simple_map$house_and_semi_proportion)
+  
+  pal_SEIFA_3 <- colorNumeric(
+    palette = c("white","purple"),
+    domain = simple_map$economic_resources_index)
+  
+  pal_land <- colorNumeric( ###### Cant use this as there are infinite values
+    palette = c("white","darkgreen"),
+    domain = simple_map$median_land_value_per_sqm)
+  
+  pal_house_price <- colorNumeric(
+    palette = c("white","darkred"),
+    domain = simple_map$house_median_suburb)
+  
+  # Set up leaflet map
+  leaf_map <- leaflet(simple_map) %>%
     addTiles() %>%
     setView(146.9211,-32.2532, zoom = 5.5) %>%
-    addPolygons(weight = 1, fillColor = "grey", color = "black",
-                opacity = 1, fillOpacity = 0.6)
+    addPolygons(data = simple_map,
+                weight = 1, 
+                fillColor = ~pal_crime(log_crime_score), 
+                color = "black",
+                opacity = 1,
+                fillOpacity = 0.8,
+                popup = popupTable(simple_map, zcol = c(2:4), feature.id = FALSE),
+                group = "Crime") %>%
+    addPolygons(data = simple_map,
+                weight = 1, 
+                fillColor = ~pal_education(education_score), 
+                color = "black",
+                opacity = 1,
+                fillOpacity = 0.8,
+                popup = popupTable(simple_map, zcol = c(2:4), feature.id = FALSE),
+                group = "Education") %>%
+    addPolygons(data = simple_map,
+               weight = 1, 
+               fillColor = ~pal_green_space(green_score_decile), 
+               color = "black",
+               opacity = 1,
+               fillOpacity = 0.8,
+               popup = popupTable(simple_map, zcol = c(2:4), feature.id = FALSE),
+               group = "Green Space") %>%
+    addPolygons(data = simple_map,
+               weight = 1, 
+               fillColor = ~pal_SEIFA_3(economic_resources_index), 
+               color = "black",
+               opacity = 1,
+               fillOpacity = 0.8,
+               popup = popupTable(simple_map, zcol = c(2:4), feature.id = FALSE),
+               group = "SEIFA - Economic Resources") %>%
+    addLayersControl(baseGroups = c("Crime",
+                                    "Education",
+                                    "Green Space",
+                                    "SEIFA - Economic Resources"),
+                     options = layersControlOptions(collapsed = FALSE),
+                     position = "topright" )
 
+  
+  
+  # saved
+  addPolygons(data = simple_map,
+              weight = 1, 
+              fillColor = ~pal_house(house_and_semi_proportion), 
+              color = "black",
+              opacity = 1,
+              fillOpacity = 0.8,
+              popup = popupTable(simple_map, zcol = c(2:4), feature.id = FALSE),
+              group = "Proportion of Houses") %>%
+  addPolygons(data = simple_map,
+              weight = 1, 
+              fillColor = ~pal_house_price(house_median_suburb), 
+              color = "black",
+              opacity = 1,
+              fillOpacity = 0.8,
+              popup = popupTable(simple_map, zcol = c(2:4), feature.id = FALSE),
+              group = "House Prices")
+    
+  object_size(leaf_map)
+  
+  saveRDS(leaf_map,"leaflet_investigation_app/data/leaf_map.rds")
   
 # [2] ---- Mapview Investigation App ----
   
