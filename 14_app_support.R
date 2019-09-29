@@ -1,5 +1,10 @@
 # Visualisations
 
+# Suggested sites
+# https://rstudio.github.io/leaflet/
+# https://github.com/Robinlovelace/Creating-maps-in-R/blob/master/vignettes/vspd-base-shiny.md 
+# https://geocompr.robinlovelace.net/adv-map.html
+
 # [0] ---- Load packages ----
 
   library(readr)
@@ -255,10 +260,85 @@
   # [2a] ---- Obtain Data and Add to Data File ----
 
   nsw <- read_sf("data/shapefiles/2016") %>%
-    filter(STE_CODE16 == 1)
+    filter(STE_CODE16 == 1) %>%
+    filter(!SSC_CODE16 %in% c(19494,19797,12387)) %>%
+    mutate(SSC_CODE16 = as.numeric(SSC_CODE16)) %>%
+    select(suburb_code = SSC_CODE16,suburb_name = SSC_NAME16)
+  
+  master <- readRDS("data/created/master.rds")
+  
+  suburb_data <- master %>%
+    filter(!gccsa_code %in% c(19499,19799))
+  
+  suburb_subset <- suburb_data %>%
+    select(suburb_code,suburb_name,year, log_crime_score,education_score) %>%
+    filter(year == 2019)
+  
+  map <- nsw %>%
+    left_join(suburb_subset, by = c("suburb_code", "suburb_name")) %>%
+    select(suburb_code,suburb_name,log_crime_score,education_score)
+  
+  other_map <- readRDS("mapview_investigation_app/data/map.rds")
   
   # [2b] ---- Testing Objects ----
 
   leaflet(nsw) %>%
     addTiles() %>%
     setView(146.9211,-32.2532, zoom = 5.5)
+  
+  leaflet(map) %>%
+    addTiles() %>%
+    setView(146.9211,-32.2532, zoom = 5.5) %>%
+    addPolygons()
+  
+  mapview(map, zcol= c("log_crime_score","education_score"))
+  
+  mapview(map) + 
+   mapview(zcol= c("log_crime_score","education_score"))
+  
+  mapview(other)
+  
+# [2] ---- Mapview Investigation App ----
+  
+# [2a] ---- Obtain Data and Add to Data File ----
+  
+  nsw <- read_sf("data/shapefiles/2016") %>%
+    filter(STE_CODE16 == 1) %>%
+    filter(!SSC_CODE16 %in% c(19494,19797,12387)) %>%
+    mutate(SSC_CODE16 = as.numeric(SSC_CODE16)) %>%
+    select(suburb_code = SSC_CODE16,suburb_name = SSC_NAME16)
+  
+  master <- readRDS("data/created/master.rds")
+  
+  suburb_data <- master %>%
+    filter(!gccsa_code %in% c(19499,19799))
+  
+  suburb_subset <- suburb_data %>%
+    select(suburb_code,suburb_name,year, log_crime_score,education_score) %>%
+    filter(year == 2019)
+  
+  map <- nsw %>%
+    left_join(suburb_subset, by = c("suburb_code", "suburb_name")) %>%
+    select(suburb_code,suburb_name,log_crime_score,education_score)
+  
+  other_map <- readRDS("mapview_investigation_app/data/map.rds")
+  
+# [2b] ---- Testing Objects ----
+  
+  leaflet(nsw) %>%
+    addTiles() %>%
+    setView(146.9211,-32.2532, zoom = 5.5)
+  
+  leaflet(map) %>%
+    addTiles() %>%
+    setView(146.9211,-32.2532, zoom = 5.5) %>%
+    addPolygons()
+  
+  mapview(map, zcol= c("log_crime_score","education_score"))
+  
+  mapview(map) + 
+    mapview(zcol= c("log_crime_score","education_score"))
+  
+  mapview(other)
+  
+  saveRDS(map, "mapview_investigation_app/data/other_map.rds")
