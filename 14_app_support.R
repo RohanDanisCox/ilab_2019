@@ -23,6 +23,7 @@
   library(mapview)
   library(leaflet)
   library(leafpop)
+  library(pryr)
 
 # [1] ---- Suburb_Investigation App ----
 
@@ -271,14 +272,22 @@
     filter(!gccsa_code %in% c(19499,19799))
   
   suburb_subset <- suburb_data %>%
-    select(suburb_code,suburb_name,year, log_crime_score,education_score) %>%
+    select(suburb_code,suburb_name,year, log_crime_score,education_score,green_score_decile) %>%
     filter(year == 2019)
   
   map <- nsw %>%
     left_join(suburb_subset, by = c("suburb_code", "suburb_name")) %>%
-    select(suburb_code,suburb_name,log_crime_score,education_score)
+    select(suburb_code,suburb_name,log_crime_score,education_score, green_score_decile)
   
-  other_map <- readRDS("mapview_investigation_app/data/map.rds")
+  ## Trying to simplify object
+  
+  simple_map <- map %>%
+    st_simplify(preserveTopology = TRUE,dTolerance = 0.0001)
+  
+  object_size(map)
+  object_size(simple_map)
+ 
+  saveRDS(simple_map,"leaflet_investigation_app/data/simple_map.rds")
   
   # [2b] ---- Testing Objects ----
 
@@ -286,17 +295,12 @@
     addTiles() %>%
     setView(146.9211,-32.2532, zoom = 5.5)
   
-  leaflet(map) %>%
+  leaflet(simple_map) %>%
     addTiles() %>%
     setView(146.9211,-32.2532, zoom = 5.5) %>%
-    addPolygons()
-  
-  mapview(map, zcol= c("log_crime_score","education_score"))
-  
-  mapview(map) + 
-   mapview(zcol= c("log_crime_score","education_score"))
-  
-  mapview(other)
+    addPolygons(weight = 1, fillColor = "grey", color = "black",
+                opacity = 1, fillOpacity = 0.6)
+
   
 # [2] ---- Mapview Investigation App ----
   
@@ -323,22 +327,39 @@
   
   other_map <- readRDS("mapview_investigation_app/data/map.rds")
   
+  ## Trying to simplify object
+  
+  simple_map <- map %>%
+    st_simplify(preserveTopology = TRUE,dTolerance = 0.0001)
+  
+  object_size(map)
+  object_size(simple_map)
+  
+  saveRDS(simple_map,"mapview_investigation_app/data/simple_map.rds" )
+
 # [2b] ---- Testing Objects ----
   
   leaflet(nsw) %>%
     addTiles() %>%
     setView(146.9211,-32.2532, zoom = 5.5)
   
-  leaflet(map) %>%
+  leaflet(simple_map) %>%
     addTiles() %>%
     setView(146.9211,-32.2532, zoom = 5.5) %>%
     addPolygons()
   
-  mapview(map, zcol= c("log_crime_score","education_score"))
+  test <- mapview(simple_map, zcol= c("log_crime_score","education_score"))
+  
+  object_size(test)
+  
+  saveRDS(test,"mapview_investigation_app/data/map_built.rds")
   
   mapview(map) + 
     mapview(zcol= c("log_crime_score","education_score"))
   
   mapview(other)
   
-  saveRDS(map, "mapview_investigation_app/data/other_map.rds")
+  saveRDS(map, "mapview_investigation_app/data/other_map.rds")\
+  
+
+   

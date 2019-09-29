@@ -11,7 +11,7 @@
 
 # [1] ---- Load global data ----
 
-    map <- readRDS("data/other_map.rds")
+    map_built <- readRDS("data/map_built.rds")
 
 # [2] ---- Define UI ----
     ui <- fluidPage(
@@ -34,12 +34,8 @@
 # [2] ---- Server ----
 server <- function(input, output) {
     
-    m <- mapview(map, 
-                 zcol= c("log_crime_score","education_score"),
-                 popup = popupTable(map,zcol = c(2,3,4)))
-    
     output$map <- renderLeaflet({
-        m@map
+        map_built@map
     })
 }
 

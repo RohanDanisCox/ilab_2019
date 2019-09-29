@@ -27,7 +27,7 @@ library(markdown)
                      tabPanel("Introduction",
                               titlePanel("Welcome to the Suburb Investigator"),
                               fluidRow(column(12,
-                                              includeMarkdown("data/test.Rmd")))),
+                                              includeMarkdown("data/suburb_investigation_markdown.Rmd")))),
                      tabPanel("Investigator",
                               sidebarLayout(
                                   sidebarPanel(
