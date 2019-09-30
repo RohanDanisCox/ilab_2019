@@ -272,20 +272,23 @@
     filter(!gccsa_code %in% c(19499,19799))
   
   suburb_subset <- suburb_data %>%
-    select(suburb_code,suburb_name,year,
-           log_crime_score,education_score,green_score_decile,
-           working_age_proportion,public_transport_proportion,
-           house_and_semi_proportion,economic_resources_index,
-           median_land_value_per_sqm,house_median_suburb) %>%
+    select(suburb_code,suburb_name,year,sa2_name,sa3_name,sa4_name,suburb_area_sqkm,
+           violent_crime,dasg_crime,log_crime_score, # Crime
+           education_score, # education
+           green_score_decile, # green space
+           usual_resident_population,working_age_proportion,senior_citizen_proportion, # Demographics 
+           confirmed_journeys,public_transport_proportion,motor_vehicle_proportion, bicycle_walking_proportion, # Transport
+           confirmed_dwellings, house_and_semi_proportion, unit_proportion, dwelling_density, # Dwellings
+           relative_socio_economic_disadvantage_index, relative_socio_economic_adv_disadv_index, # SEIFA
+           economic_resources_index, education_and_occupation_index, # SEIFA
+           median_land_value,median_land_value_per_sqm, # Land Values
+           aria_overall, aria_education, aria_health, aria_shopping, aria_public_transport, aria_financial_postal, # ARIA
+           house_median_suburb, apartment_median_suburb, land_median_suburb, annual_turnover, # Property Prices
+           ) %>%
     filter(year == 2019)
   
   map <- nsw %>%
-    left_join(suburb_subset, by = c("suburb_code", "suburb_name")) %>%
-    select(suburb_code,suburb_name,
-           log_crime_score,education_score,green_score_decile,
-           working_age_proportion,public_transport_proportion,
-           house_and_semi_proportion,economic_resources_index,
-           median_land_value_per_sqm,house_median_suburb)
+    left_join(suburb_subset, by = c("suburb_code", "suburb_name")) 
   
   ## Trying to simplify object
   
@@ -296,6 +299,7 @@
   object_size(simple_map)
  
   saveRDS(simple_map,"leaflet_investigation_app/data/simple_map.rds")
+  
   
   # [2b] ---- Testing Objects ----
 
@@ -402,6 +406,8 @@
               fillOpacity = 0.8,
               popup = popupTable(simple_map, zcol = c(2:4), feature.id = FALSE),
               group = "House Prices")
+  
+  ?popupTable
     
   object_size(leaf_map)
   
@@ -464,7 +470,77 @@
   
   mapview(other)
   
-  saveRDS(map, "mapview_investigation_app/data/other_map.rds")\
+  saveRDS(map, "mapview_investigation_app/data/other_map.rds")
   
+# [3] ---- Similarity Investigation App ----  
+  # [3a] ---- Obtain Data and Add to Data File ----
+  
+  nsw <- read_sf("data/shapefiles/2016") %>%
+    filter(STE_CODE16 == 1) %>%
+    filter(!SSC_CODE16 %in% c(19494,19797,12387)) %>%
+    mutate(SSC_CODE16 = as.numeric(SSC_CODE16)) %>%
+    select(suburb_code = SSC_CODE16,suburb_name = SSC_NAME16)
+  
+  master <- readRDS("data/created/master.rds")
+  
+  suburb_data <- master %>%
+    filter(!gccsa_code %in% c(19499,19799))
+  
+  suburb_subset <- suburb_data %>%
+    select(suburb_code,suburb_name,year,sa2_name,sa3_name,sa4_name,suburb_area_sqkm,
+           violent_crime,dasg_crime,log_crime_score, # Crime
+           education_score, # education
+           green_score_decile, # green space
+           usual_resident_population,working_age_proportion,senior_citizen_proportion, # Demographics 
+           confirmed_journeys,public_transport_proportion,motor_vehicle_proportion, bicycle_walking_proportion, # Transport
+           confirmed_dwellings, house_and_semi_proportion, unit_proportion, dwelling_density, # Dwellings
+           relative_socio_economic_disadvantage_index, relative_socio_economic_adv_disadv_index, # SEIFA
+           economic_resources_index, education_and_occupation_index, # SEIFA
+           median_land_value,median_land_value_per_sqm, # Land Values
+           aria_overall, aria_education, aria_health, aria_shopping, aria_public_transport, aria_financial_postal, # ARIA
+           house_median_suburb, apartment_median_suburb, land_median_suburb, annual_turnover, # Property Prices
+    ) %>%
+    filter(year == 2019)
+  
+  map <- nsw %>%
+    left_join(suburb_subset, by = c("suburb_code", "suburb_name")) 
+  
+  ## Trying to simplify object
+  
+  simple_map <- map %>%
+    st_simplify(preserveTopology = TRUE,dTolerance = 0.0002)
+  
+  simple_data <- simple_map %>%
+    st_drop_geometry()
+  
+  object_size(map)
+  object_size(simple_map)
+  
+  saveRDS(simple_map,"similarity_app/data/simple_map.rds")
+  
+  
+  # [2b] ---- Testing Objects ----
+  
+  ## Get the min, max and mean for each variable 
+  
+  check <- simple_data %>% 
+    map_df(~(data.frame(n_distinct = n_distinct(.x),
+                        class = class(.x),
+                        na_count = sum(is.na(.x)))),
+           .id = "variable")
+  
+  check_2 <- simple_data %>%
+    select(7:39) %>%
+    map_df(~(data.frame(min = round(min(.x, na.rm = TRUE),3),
+                        max = round(max(.x, na.rm = TRUE),3),
+                        mean = round(mean(.x,na.rm = TRUE),3),
+                        na_count = sum(is.na(.x)))),
+           .id = "variable")
+  
+  max(simple_data$log_crime_score,na.rm = TRUE)
 
-   
+  check_2 %>% 
+    filter(variable == "suburb_area_sqkm") %>%
+    select(min) %>%
+    pull()
+    
