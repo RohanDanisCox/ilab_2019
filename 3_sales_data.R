@@ -589,7 +589,13 @@
               median_land_value_per_sqm = median(land_value_per_sqm)) %>%
     collect()
   
-  write_rds(land_values,"data/created/land_values.rds")
+  # Need to add in a 2019 year which equals the 2018 year.
+  land_2019 <- land_values %>%
+    filter(year == 2018) %>%
+    mutate(year = 2019) %>%
+    bind_rows(land_values)
+  
+  write_rds(land_2019,"data/created/land_values.rds")
   
 #### ---- Below here are all things I tried but are now redundant ----
   

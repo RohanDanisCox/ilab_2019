@@ -18,16 +18,14 @@ library(RColorBrewer)
 
 map <- readRDS("data/simple_map.rds")
 
+scaled_data <- readRDS("data/scaled_data.rds") %>%
+    select(1,2,5,6)             ##### NEED TO REMOVE THIS LATER
+
+scaler <- readRDS("data/scaling_data.rds") %>%
+    filter(variable %in% c("suburb_area_sqkm","log_crime_score","education_score")) ##### NEED TO REMOVE THIS LATER
+
 data <- map %>%
     st_drop_geometry()
-
-slider_options <- data %>%
-    select(7:39) %>%
-    map_df(~(data.frame(min = round(min(.x, na.rm = TRUE),0),
-                        max = round(max(.x, na.rm = TRUE),0),
-                        mean = round(mean(.x,na.rm = TRUE),0),
-                        na_count = sum(is.na(.x)))),
-           .id = "variable")
 
 #pal_similarity <- colorNumeric(palette = c("white","darkred"),domain = data$similarity_score)
 
@@ -46,11 +44,12 @@ ui <- navbarPage("Suburb Similarity",
                               sidebarPanel(
                                   htmlOutput("size"),
                                   htmlOutput("crime"),
-                                  htmlOutput("education")
+                                  htmlOutput("education"),
+                                  htmlOutput("button")
                               ),
                               # Show a plot of the generated distribution
                               mainPanel(
-                                  withSpinner(leafletOutput(outputId = 'map_1', height = 800))
+                                  withSpinner(dataTableOutput(outputId = 'test'))
                               )
                           )
                  ),
@@ -72,25 +71,43 @@ server <- function(input, output) {
     output$size = renderUI({
         sliderInput(inputId = "size",
                     label = "Size (Km2):",
-                    min = slider_options %>% filter(variable == "suburb_area_sqkm") %>% select(min) %>% pull(),
-                    max = slider_options %>% filter(variable == "suburb_area_sqkm") %>% select(max) %>% pull(),
-                    value = slider_options %>% filter(variable == "suburb_area_sqkm") %>% select(mean) %>% pull())
+                    min = scaler %>% filter(variable == "suburb_area_sqkm") %>% select(min) %>% pull(),
+                    max = scaler %>% filter(variable == "suburb_area_sqkm") %>% select(max) %>% pull(),
+                    value = scaler %>% filter(variable == "suburb_area_sqkm") %>% select(mean) %>% pull())
     })
     output$crime = renderUI({
         sliderInput(inputId = "crime",
                     label = "Crime Score:",
-                    min = slider_options %>% filter(variable == "log_crime_score") %>% select(min) %>% pull(),
-                    max = slider_options %>% filter(variable == "log_crime_score") %>% select(max) %>% pull(),
-                    value = slider_options %>% filter(variable == "log_crime_score") %>% select(mean) %>% pull())
+                    min = scaler %>% filter(variable == "log_crime_score") %>% select(min) %>% pull(),
+                    max = scaler %>% filter(variable == "log_crime_score") %>% select(max) %>% pull(),
+                    value = scaler %>% filter(variable == "log_crime_score") %>% select(mean) %>% pull())
     })
     output$education = renderUI({
         sliderInput(inputId = "education",
                     label = "Education Score:",
-                    min = min(data$education_score, na.rm = TRUE),
-                    max = max(data$education_score, na.rm = TRUE),
-                    value = mean(data$education_score, na.rm = TRUE))
+                    min = scaler %>% filter(variable == "education_score") %>% select(min) %>% pull(),
+                    max = scaler %>% filter(variable == "education_score") %>% select(max) %>% pull(),
+                    value = scaler %>% filter(variable == "education_score") %>% select(mean) %>% pull())
+    })
+    output$button = renderUI({
+        actionButton(inputId = "go", label = "Calculate Simularity")
     })
  
+    ##### Here is where I need to calculate the similarity scores
+    
+    new_values <- eventReactive(input$go,{
+        #if(is.null(input$go)){
+        #    return()
+        #}
+        tibble(new_values = c(input$size,input$crime,input$education)) %>%
+            cbind(scaler) %>%
+            mutate(scaled_value = (new_values - mean) / sd) 
+    })
+    
+    output$test <- renderDataTable({
+        new_values()
+    })
+    
     output$map_1 <- renderLeaflet({
         leaflet(map) %>%
             addTiles() %>%

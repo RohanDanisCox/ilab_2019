@@ -505,6 +505,19 @@
   map <- nsw %>%
     left_join(suburb_subset, by = c("suburb_code", "suburb_name")) 
   
+  scaled_data <- suburb_subset %>%
+    select(2,7:39) %>%
+    mutate_if(is.numeric,scale)
+  
+  scaling_data <- suburb_subset %>%
+    select(7:39) %>%
+    map_df(~(data.frame(min = min(.x, na.rm = TRUE),
+                        max = max(.x, na.rm = TRUE),
+                        mean = mean(.x,na.rm = TRUE),
+                        sd = sd(.x, na.rm = TRUE),
+                        na_count = sum(is.na(.x)))),
+           .id = "variable")
+    
   ## Trying to simplify object
   
   simple_map <- map %>%
@@ -517,7 +530,8 @@
   object_size(simple_map)
   
   saveRDS(simple_map,"similarity_app/data/simple_map.rds")
-  
+  saveRDS(scaled_data,"similarity_app/data/scaled_data.rds")
+  saveRDS(scaling_data,"similarity_app/data/scaling_data.rds")
   
   # [2b] ---- Testing Objects ----
   
