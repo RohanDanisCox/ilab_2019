@@ -20,10 +20,16 @@ library(pdist)
 map <- readRDS("data/simple_map.rds")
 
 scaled_data <- readRDS("data/scaled_data.rds") %>%
-    select(1,2,5,6,7)             ##### NEED TO REMOVE THIS LATER
+    select(1,2,5,6,7,8,9,10,12,13,14,16,17,18,19,20,21,22,24,31,32)             ##### NEED TO REMOVE THIS LATER
 
 scaler <- readRDS("data/scaling_data.rds") %>%
-    filter(variable %in% c("suburb_area_sqkm","log_crime_score","education_score","green_score_decile")) ##### NEED TO REMOVE THIS LATER
+    filter(variable %in% c("suburb_area_sqkm","log_crime_score","education_score","green_score_decile",
+                           "usual_resident_population","working_age_proportion","senior_citizen_proportion",
+                           "public_transport_proportion","motor_vehicle_proportion","bicycle_walking_proportion",
+                           "house_and_semi_proportion","unit_proportion","dwelling_density",
+                           "relative_socio_economic_disadvantage_index","relative_socio_economic_adv_disadv_index",
+                           "economic_resources_index","education_and_occupation_index",
+                           "median_land_value_per_sqm","house_median_suburb","apartment_median_suburb")) ##### NEED TO REMOVE THIS LATER
 
 data <- map %>%
     st_drop_geometry()
@@ -61,11 +67,27 @@ ui <- navbarPage("Suburb Similarity",
                                   htmlOutput("crime"),
                                   htmlOutput("education"),
                                   htmlOutput("green"),
+                                  htmlOutput("population"),
+                                  htmlOutput("working"),
+                                  htmlOutput("seniors"),
+                                  htmlOutput("public_transport"),
+                                  htmlOutput("motor_vehicle"),
+                                  htmlOutput("bicycle_walking"),
+                                  htmlOutput("house"),
+                                  htmlOutput("unit"),
+                                  htmlOutput("density"),
+                                  htmlOutput("seifa_1"),
+                                  htmlOutput("seifa_2"),
+                                  htmlOutput("seifa_3"),
+                                  htmlOutput("seifa_4"),
+                                  htmlOutput("land_sqm"),
+                                  htmlOutput("house_median"),
+                                  htmlOutput("unit_median"),
                                   htmlOutput("button")
                               ),
                               # Show a plot of the generated distribution
                               mainPanel(
-                                  withSpinner(leafletOutput(outputId = 'map_1', height = 500)),
+                                  withSpinner(leafletOutput(outputId = 'map_1', height = 600)),
                                   withSpinner(dataTableOutput(outputId = 'test'))
                               )
                           )
@@ -114,6 +136,118 @@ server <- function(input, output) {
                     max = scaler %>% filter(variable == "green_score_decile") %>% select(max) %>% pull(),
                     value = scaler %>% filter(variable == "green_score_decile") %>% select(mean) %>% pull())
     })
+    output$population = renderUI({
+        sliderInput(inputId = "population",
+                    label = "Population:",
+                    min = scaler %>% filter(variable == "usual_resident_population") %>% select(min) %>% pull(),
+                    max = scaler %>% filter(variable == "usual_resident_population") %>% select(max) %>% pull(),
+                    value = scaler %>% filter(variable == "usual_resident_population") %>% select(mean) %>% pull())
+    })
+    output$working = renderUI({
+        sliderInput(inputId = "working",
+                    label = "Working Age Proportion:",
+                    min = scaler %>% filter(variable == "working_age_proportion") %>% select(min) %>% pull(),
+                    max = scaler %>% filter(variable == "working_age_proportion") %>% select(max) %>% pull(),
+                    value = scaler %>% filter(variable == "working_age_proportion") %>% select(mean) %>% pull())
+    })
+    output$seniors = renderUI({
+        sliderInput(inputId = "seniors",
+                    label = "Senior Citizen Proportion:",
+                    min = scaler %>% filter(variable == "senior_citizen_proportion") %>% select(min) %>% pull(),
+                    max = scaler %>% filter(variable == "senior_citizen_proportion") %>% select(max) %>% pull(),
+                    value = scaler %>% filter(variable == "senior_citizen_proportion") %>% select(mean) %>% pull())
+    })
+    output$public_transport = renderUI({
+        sliderInput(inputId = "public_transport",
+                    label = "Proportion of Journeys to Work via Public Transport:",
+                    min = scaler %>% filter(variable == "public_transport_proportion") %>% select(min) %>% pull(),
+                    max = scaler %>% filter(variable == "public_transport_proportion") %>% select(max) %>% pull(),
+                    value = scaler %>% filter(variable == "public_transport_proportion") %>% select(mean) %>% pull())
+    })
+    output$motor_vehicle = renderUI({
+        sliderInput(inputId = "motor_vehicle",
+                    label = "Proportion of Journeys to Work via Motor Vehicle:",
+                    min = scaler %>% filter(variable == "motor_vehicle_proportion") %>% select(min) %>% pull(),
+                    max = scaler %>% filter(variable == "motor_vehicle_proportion") %>% select(max) %>% pull(),
+                    value = scaler %>% filter(variable == "motor_vehicle_proportion") %>% select(mean) %>% pull())
+    })
+    output$bicycle_walking = renderUI({
+        sliderInput(inputId = "bicycle_walking",
+                    label = "Proportion of Journeys to Work by Bike or Walking:",
+                    min = scaler %>% filter(variable == "bicycle_walking_proportion") %>% select(min) %>% pull(),
+                    max = scaler %>% filter(variable == "bicycle_walking_proportion") %>% select(max) %>% pull(),
+                    value = scaler %>% filter(variable == "bicycle_walking_proportion") %>% select(mean) %>% pull())
+    })
+    output$house = renderUI({
+        sliderInput(inputId = "house",
+                    label = "Proportion of Dwellings as Houses:",
+                    min = scaler %>% filter(variable == "house_and_semi_proportion") %>% select(min) %>% pull(),
+                    max = scaler %>% filter(variable == "house_and_semi_proportion") %>% select(max) %>% pull(),
+                    value = scaler %>% filter(variable == "house_and_semi_proportion") %>% select(mean) %>% pull())
+    })
+    output$unit = renderUI({
+        sliderInput(inputId = "unit",
+                    label = "Proportion of Dwellings as Units:",
+                    min = scaler %>% filter(variable == "unit_proportion") %>% select(min) %>% pull(),
+                    max = scaler %>% filter(variable == "unit_proportion") %>% select(max) %>% pull(),
+                    value = scaler %>% filter(variable == "unit_proportion") %>% select(mean) %>% pull())
+    })
+    output$density = renderUI({
+        sliderInput(inputId = "density",
+                    label = "Dwelling Density (Dwellings per km2):",
+                    min = scaler %>% filter(variable == "dwelling_density") %>% select(min) %>% pull(),
+                    max = scaler %>% filter(variable == "dwelling_density") %>% select(max) %>% pull(),
+                    value = scaler %>% filter(variable == "dwelling_density") %>% select(mean) %>% pull())
+    })
+    output$seifa_1 = renderUI({
+        sliderInput(inputId = "seifa_1",
+                    label = "SEIFA - Socio-Economic Disadvantage:",
+                    min = scaler %>% filter(variable == "relative_socio_economic_disadvantage_index") %>% select(min) %>% pull(),
+                    max = scaler %>% filter(variable == "relative_socio_economic_disadvantage_index") %>% select(max) %>% pull(),
+                    value = scaler %>% filter(variable == "relative_socio_economic_disadvantage_index") %>% select(mean) %>% pull())
+    })
+    output$seifa_2 = renderUI({
+        sliderInput(inputId = "seifa_2",
+                    label = "SEIFA - Socio-Economic Advantage/Disadvantage:",
+                    min = scaler %>% filter(variable == "relative_socio_economic_adv_disadv_index") %>% select(min) %>% pull(),
+                    max = scaler %>% filter(variable == "relative_socio_economic_adv_disadv_index") %>% select(max) %>% pull(),
+                    value = scaler %>% filter(variable == "relative_socio_economic_adv_disadv_index") %>% select(mean) %>% pull())
+    })
+    output$seifa_3 = renderUI({
+        sliderInput(inputId = "seifa_3",
+                    label = "SEIFA - Economic Resources:",
+                    min = scaler %>% filter(variable == "economic_resources_index") %>% select(min) %>% pull(),
+                    max = scaler %>% filter(variable == "economic_resources_index") %>% select(max) %>% pull(),
+                    value = scaler %>% filter(variable == "economic_resources_index") %>% select(mean) %>% pull())
+    })
+    output$seifa_4 = renderUI({
+        sliderInput(inputId = "seifa_4",
+                    label = "SEIFA - Education & Occupation:",
+                    min = scaler %>% filter(variable == "education_and_occupation_index") %>% select(min) %>% pull(),
+                    max = scaler %>% filter(variable == "education_and_occupation_index") %>% select(max) %>% pull(),
+                    value = scaler %>% filter(variable == "education_and_occupation_index") %>% select(mean) %>% pull())
+    })
+    output$land_sqm = renderUI({
+        sliderInput(inputId = "land_sqm",
+                    label = "Land Value per Square Metre:",
+                    min = scaler %>% filter(variable == "median_land_value_per_sqm") %>% select(min) %>% pull(),
+                    max = scaler %>% filter(variable == "median_land_value_per_sqm") %>% select(max) %>% pull(),
+                    value = scaler %>% filter(variable == "median_land_value_per_sqm") %>% select(mean) %>% pull())
+    })
+    output$house_median = renderUI({
+        sliderInput(inputId = "house_median",
+                    label = "Median House Value:",
+                    min = scaler %>% filter(variable == "house_median_suburb") %>% select(min) %>% pull(),
+                    max = scaler %>% filter(variable == "house_median_suburb") %>% select(max) %>% pull(),
+                    value = scaler %>% filter(variable == "house_median_suburb") %>% select(mean) %>% pull())
+    })
+    output$unit_median = renderUI({
+        sliderInput(inputId = "unit_median",
+                    label = "Median Unit Value:",
+                    min = scaler %>% filter(variable == "apartment_median_suburb") %>% select(min) %>% pull(),
+                    max = scaler %>% filter(variable == "apartment_median_suburb") %>% select(max) %>% pull(),
+                    value = scaler %>% filter(variable == "apartment_median_suburb") %>% select(mean) %>% pull())
+    })
     output$button = renderUI({
         actionButton(inputId = "go", label = "Calculate Simularity")
     })
@@ -124,44 +258,58 @@ server <- function(input, output) {
         #if(is.null(input$go)){
         #    return()
         #}
-        new <- tibble(new_values = c(input$size,input$crime,input$education,input$green)) %>%
+        new <- tibble(new_values = c(input$size,input$crime,input$education,input$green,
+                                     input$population,input$working,input$seniors,input$public_transport,
+                                     input$motor_vehicle,input$bicycle_walking,input$house,
+                                     input$unit,input$density,input$seifa_1,input$seifa_2,
+                                     input$seifa_3,input$seifa_4,input$land_sqm,input$house_median,
+                                     input$unit_median)) %>%
             cbind(scaler) %>%
             mutate(scaled_value = (new_values - mean) / sd) %>%
             select(scaled_value) %>% 
             t()
         suburb <- scaled_data
-        z <- as.data.frame(rdist_na(new,suburb[,2:5])) %>%
+        z <- as.data.frame(rdist_na(new,suburb[,2:21])) %>%
             mutate(divisor = 1/V1) %>%
-            mutate(normalise = (divisor - min(divisor, na.rm = TRUE))/ (max(divisor, na.rm = TRUE) - min(divisor, na.rm = TRUE)))
+            mutate(simularity = (divisor - min(divisor, na.rm = TRUE))/ (max(divisor, na.rm = TRUE) - min(divisor, na.rm = TRUE)))
         combined <- suburb %>% 
             select(suburb_name) %>%
-            cbind(z) %>%
-            arrange(desc(normalise)) %>%
-            head(10)
+            cbind(z) 
         combined
     })
     
     output$test <- renderDataTable({
-        new_values()
+        new_values() %>%
+            arrange(desc(simularity)) %>%
+            head(10)
     })
     
     output$map_1 <- renderLeaflet({
+        top_10 <- new_values() %>%
+            arrange(desc(simularity)) %>%
+            head(10)
         map_small <- map %>%
-            left_join(new_values(),by = "suburb_name") %>%
-            filter(!is.na(normalise))
+            left_join(top_10,by = "suburb_name") %>%
+            filter(!is.na(simularity)) %>%
+            arrange(desc(simularity))
+        top <- map_small %>%
+            st_centroid(geometry)
+        top_lat <- top$geometry[[1]][1]
+        top_lng <- top$geometry[[1]][2]
         
-        pal <- colorNumeric(palette = c("white","red"),domain = map_small$normalise)
+        pal <- colorNumeric(palette = c("white","red"),domain = new_values()$simularity)
         
-        leaflet(map_small) %>%
+        leaflet(map_small,options = leafletOptions(minZoom = 6)) %>%
             addTiles() %>%
-            setView(146.9211,-33.2532, zoom = 6) %>%
+            #setView(146.9211,-33.2532, zoom = 6) %>%
+            flyTo(top,lng = top_lat,lat = top_lng,zoom = 10) %>%
             addPolygons(data = map_small,
                         weight = 1, 
-                        fillColor = ~pal(normalise), 
+                        fillColor = ~pal(simularity), 
                         color = "black",
                         opacity = 1,
                         fillOpacity = 0.8,
-                        popup = popupTable(map_small,  zcol = c(2,4:6,40:43),feature.id = FALSE, row.numbers = FALSE))
+                        popup = popupTable(map_small,  zcol = c(2,4:10,43),feature.id = FALSE, row.numbers = FALSE))
     })
     
     output$map_2 <- renderLeaflet({

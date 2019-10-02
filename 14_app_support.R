@@ -509,6 +509,8 @@
     select(2,7:39) %>%
     mutate_if(is.numeric,scale)
   
+  names(scaled_data)
+  ?setView
   scaling_data <- suburb_subset %>%
     select(7:39) %>%
     map_df(~(data.frame(min = min(.x, na.rm = TRUE),
@@ -576,18 +578,6 @@
   
   b <- as.data.frame(fields::rdist(suburb[,2:5],new)) 
   
-
-    mutate(divisor = 1/V1) %>%
-      mutate(normalise = (divisor - min(divisor, na.rm = TRUE))/ (max(divisor, na.rm = TRUE) - min(divisor, na.rm = TRUE)))
-    combined <- suburb %>% 
-      select(suburb_name) %>%
-      cbind(z) #%>%
-    #arrange(desc(normalise)) %>%
-    #head(10)
-    combined
-    
-    
-    
     
     library(pdist)
     
@@ -605,4 +595,22 @@
     }
 
     c <- as.data.frame(rdist.w.na(new,suburb[,2:5])) 
+    
+    test <- c %>%
+      mutate(divisor = 1/V1) %>%
+      mutate(normalise = (divisor - min(divisor, na.rm = TRUE))/ (max(divisor, na.rm = TRUE) - min(divisor, na.rm = TRUE)))
+    combined <- suburb %>% 
+      select(suburb_name) %>%
+      cbind(test) %>%
+      arrange(desc(normalise)) %>%
+      head(10)
+    
+    final <- simple_map %>%
+      semi_join(combined)
+    
+    centre <- final %>%
+      head(1) %>%
+      st_centroid(geometry)
+    
+    centre$geometry[[1]][1]
     
