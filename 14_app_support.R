@@ -558,3 +558,51 @@
     select(min) %>%
     pull()
     
+  scaler <- scaling_data %>%
+    filter(variable %in% c("suburb_area_sqkm","log_crime_score","education_score","green_score_decile")) ##### NEED TO REMOVE THIS LATER
+  
+  new_values <- tibble(new_values = c(10,3,4,4)) %>%
+    cbind(scaler) %>%
+    mutate(scaled_value = (new_values - mean) / sd) 
+  
+  new <- new_values %>%
+      select(scaled_value) %>% 
+      t()
+    
+  suburb <- scaled_data %>%
+    select(1,2,5,6,7) 
+  
+  a <- as.data.frame(rdist::cdist(suburb[,2:5],new)) 
+  
+  b <- as.data.frame(fields::rdist(suburb[,2:5],new)) 
+  
+
+    mutate(divisor = 1/V1) %>%
+      mutate(normalise = (divisor - min(divisor, na.rm = TRUE))/ (max(divisor, na.rm = TRUE) - min(divisor, na.rm = TRUE)))
+    combined <- suburb %>% 
+      select(suburb_name) %>%
+      cbind(z) #%>%
+    #arrange(desc(normalise)) %>%
+    #head(10)
+    combined
+    
+    
+    
+    
+    library(pdist)
+    
+    rdist.w.na <- function(X,Y)
+    {
+      if (!is.matrix(X)) 
+        X = as.matrix(X)
+      if (!is.matrix(Y)) 
+        Y = as.matrix(Y)
+      distances <- matrix(pdist(X,Y)@dist, ncol=nrow(X), byrow = TRUE)
+      #count NAs
+      na.count <- sapply(1:nrow(X),function(i){rowSums(is.na(Y) | is.na(X[i,]))})
+      #scaling to number of cols
+      distances * sqrt(ncol(X)/(ncol(X) - na.count))
+    }
+
+    c <- as.data.frame(rdist.w.na(new,suburb[,2:5])) 
+    
