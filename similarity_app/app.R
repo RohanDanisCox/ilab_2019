@@ -63,6 +63,7 @@ ui <- navbarPage("Suburb Similarity",
                  tabPanel("Selections",
                           sidebarLayout(
                               sidebarPanel(
+                                  htmlOutput("button"),
                                   htmlOutput("size"),
                                   htmlOutput("crime"),
                                   htmlOutput("education"),
@@ -82,8 +83,7 @@ ui <- navbarPage("Suburb Similarity",
                                   htmlOutput("seifa_4"),
                                   htmlOutput("land_sqm"),
                                   htmlOutput("house_median"),
-                                  htmlOutput("unit_median"),
-                                  htmlOutput("button")
+                                  htmlOutput("unit_median")
                               ),
                               # Show a plot of the generated distribution
                               mainPanel(
@@ -285,6 +285,12 @@ server <- function(input, output) {
     })
     
     output$map_1 <- renderLeaflet({
+        leaflet(map,options = leafletOptions(minZoom = 6)) %>%
+            addTiles() %>%
+            setView(146.9211,-33.2532, zoom = 6) 
+    })
+    
+    observeEvent(input$go,{
         top_10 <- new_values() %>%
             arrange(desc(simularity)) %>%
             head(10)
@@ -299,10 +305,9 @@ server <- function(input, output) {
         
         pal <- colorNumeric(palette = c("white","red"),domain = new_values()$simularity)
         
-        leaflet(map_small,options = leafletOptions(minZoom = 6)) %>%
-            addTiles() %>%
-            #setView(146.9211,-33.2532, zoom = 6) %>%
-            flyTo(top,lng = top_lat,lat = top_lng,zoom = 10) %>%
+        leafletProxy("map_1") %>%
+            clearShapes() %>%
+            flyTo(top,lng = top_lat,lat = top_lng,zoom = 9) %>%
             addPolygons(data = map_small,
                         weight = 1, 
                         fillColor = ~pal(simularity), 
