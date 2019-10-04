@@ -35,8 +35,7 @@ data <- map %>%
     st_drop_geometry()
 
 ## Function to calculate similarity despite NA's
-rdist_na <- function(X,Y)
-{
+rdist_na <- function(X,Y){
     if (!is.matrix(X)) 
         X = as.matrix(X)
     if (!is.matrix(Y)) 
@@ -63,7 +62,9 @@ ui <- navbarPage("Suburb Similarity",
                  tabPanel("Selections",
                           sidebarLayout(
                               sidebarPanel(
-                                  htmlOutput("button"),
+                                  htmlOutput("calculate", inline = TRUE), # might be able to fix this with the inline argument - set to TRUE
+                                  htmlOutput("reset", inline = TRUE), # might be able to fix this with the inline argument - set to TRUE
+                                  htmlOutput("number", inline = TRUE),
                                   htmlOutput("size"),
                                   htmlOutput("crime"),
                                   htmlOutput("education"),
@@ -106,7 +107,21 @@ ui <- navbarPage("Suburb Similarity",
 
 # [2] ---- Define Server ----
 server <- function(input, output) {
+
+    #### Establish the Reactive UI components
     
+    output$calculate = renderUI({
+        actionButton(inputId = "calculate", label = "Calculate Similarity")
+    })
+    output$reset = renderUI({
+        actionButton(inputId = "reset", label = "Reset Values")
+    })
+    output$number = renderUI({
+        selectInput(inputId = "number",
+                    label = "Number of Suburbs Displayed:",
+                    choices = c(10,50,100,500,1000),
+                    selected = 10)
+    )}
     output$size = renderUI({
         sliderInput(inputId = "size",
                     label = "Size (Km2):",
@@ -248,16 +263,32 @@ server <- function(input, output) {
                     max = scaler %>% filter(variable == "apartment_median_suburb") %>% select(max) %>% pull(),
                     value = scaler %>% filter(variable == "apartment_median_suburb") %>% select(mean) %>% pull())
     })
-    output$button = renderUI({
-        actionButton(inputId = "go", label = "Calculate Simularity")
-    })
- 
-    ##### Here is where I need to calculate the similarity scores
     
-    new_values <- eventReactive(input$go,{
-        #if(is.null(input$go)){
-        #    return()
-        #}
+    ##### Calculate the Similarity scores
+    
+    observeEvent(input$reset,{
+        updateSliderInput(session,'number',value = 10)
+        updateSliderInput(session,'crime',value = 0)
+        updateSliderInput(session,'education',value = 0)
+        updateSliderInput(session,'green',value = 0)
+        updateSliderInput(session,'population',value = 0)
+        updateSliderInput(session,'working',value = 0)
+        updateSliderInput(session,'seniors',value = 0)
+        updateSliderInput(session,'public_transport',value = 0)
+        updateSliderInput(session,'motor_vehicle',value = 0)
+        updateSliderInput(session,'bicycle_walking',value = 0)
+        updateSliderInput(session,'house',value = 0)
+        updateSliderInput(session,'unit',value = 0)
+        updateSliderInput(session,'density',value = 0)
+        updateSliderInput(session,'seifa_1',value = 0)
+        updateSliderInput(session,'seifa_2',value = 0)
+        updateSliderInput(session,'seifa_3',value = 0)
+        updateSliderInput(session,'land_sqm',value = 0)
+        updateSliderInput(session,'house_median',value = 0)
+        updateSliderInput(session,'unit_median',value = 0)
+    })
+    
+    new_values <- eventReactive(input$calculate,{
         new <- tibble(new_values = c(input$size,input$crime,input$education,input$green,
                                      input$population,input$working,input$seniors,input$public_transport,
                                      input$motor_vehicle,input$bicycle_walking,input$house,
@@ -268,20 +299,24 @@ server <- function(input, output) {
             mutate(scaled_value = (new_values - mean) / sd) %>%
             select(scaled_value) %>% 
             t()
+        
         suburb <- scaled_data
+        
         z <- as.data.frame(rdist_na(new,suburb[,2:21])) %>%
             mutate(divisor = 1/V1) %>%
-            mutate(simularity = (divisor - min(divisor, na.rm = TRUE))/ (max(divisor, na.rm = TRUE) - min(divisor, na.rm = TRUE)))
+            mutate(similarity = (divisor - min(divisor, na.rm = TRUE))/ (max(divisor, na.rm = TRUE) - min(divisor, na.rm = TRUE)))
+        
         combined <- suburb %>% 
             select(suburb_name) %>%
             cbind(z) 
+        
         combined
     })
     
     output$test <- renderDataTable({
         new_values() %>%
-            arrange(desc(simularity)) %>%
-            head(10)
+            arrange(desc(similarity)) %>%
+            head(input$number)
     })
     
     output$map_1 <- renderLeaflet({
@@ -290,27 +325,27 @@ server <- function(input, output) {
             setView(146.9211,-33.2532, zoom = 6) 
     })
     
-    observeEvent(input$go,{
-        top_10 <- new_values() %>%
-            arrange(desc(simularity)) %>%
-            head(10)
+    observeEvent(input$calculate,{
+        top_n <- new_values() %>%
+            arrange(desc(similarity)) %>%
+            head(input$number)
         map_small <- map %>%
-            left_join(top_10,by = "suburb_name") %>%
-            filter(!is.na(simularity)) %>%
-            arrange(desc(simularity))
+            left_join(top_n,by = "suburb_name") %>%
+            filter(!is.na(similarity)) %>%
+            arrange(desc(similarity))
         top <- map_small %>%
             st_centroid(geometry)
         top_lat <- top$geometry[[1]][1]
         top_lng <- top$geometry[[1]][2]
         
-        pal <- colorNumeric(palette = c("white","red"),domain = new_values()$simularity)
+        pal <- colorNumeric(palette = c("white","red"),domain = new_values()$similarity)
         
         leafletProxy("map_1") %>%
             clearShapes() %>%
             flyTo(top,lng = top_lat,lat = top_lng,zoom = 9) %>%
             addPolygons(data = map_small,
                         weight = 1, 
-                        fillColor = ~pal(simularity), 
+                        fillColor = ~pal(similarity), 
                         color = "black",
                         opacity = 1,
                         fillOpacity = 0.8,
