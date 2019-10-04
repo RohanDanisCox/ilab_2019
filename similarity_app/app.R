@@ -91,7 +91,7 @@ ui <- navbarPage("Suburb Similarity",
                               # Show a plot of the generated distribution
                               mainPanel(
                                   withSpinner(leafletOutput(outputId = 'map_1', height = 600)),
-                                  withSpinner(dataTableOutput(outputId = 'test'))
+                                  withSpinner(dataTableOutput(outputId = 'table_1'))
                               )
                           )
                  ),
@@ -361,18 +361,18 @@ server <- function(input, output) {
         
         suburb <- scaled_data
         
-        z <- as.data.frame(rdist_na(new,suburb[,2:21])) %>%
-            mutate(divisor = 1/V1) %>%
-            mutate(similarity = (divisor - min(divisor, na.rm = TRUE))/ (max(divisor, na.rm = TRUE) - min(divisor, na.rm = TRUE)))
+        dist <- as.data.frame(rdist_na(new,suburb[,2:21])) %>%
+            rename(distance = V1) %>%
+            mutate(similarity = 1/(1+(distance/20)))
         
         combined <- suburb %>% 
             select(suburb_name) %>%
-            cbind(z) 
+            cbind(dist) 
         
         combined
     })
     
-    output$test <- renderDataTable({
+    output$table_1 <- renderDataTable({
         new_values() %>%
             arrange(desc(similarity)) %>%
             head(input$number)
@@ -401,7 +401,7 @@ server <- function(input, output) {
         
         leafletProxy("map_1") %>%
             clearShapes() %>%
-            flyTo(top,lng = top_lat,lat = top_lng,zoom = 9) %>%
+            flyTo(top,lng = top_lat,lat = top_lng,zoom = 10) %>%
             addPolygons(data = map_small,
                         weight = 1, 
                         fillColor = ~pal(similarity), 
