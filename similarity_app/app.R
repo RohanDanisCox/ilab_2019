@@ -19,6 +19,8 @@ library(pdist)
 
 map <- readRDS("data/simple_map.rds")
 
+choices <- readRDS("data/choices.rds")
+
 scaled_data <- readRDS("data/scaled_data.rds") %>%
     select(1,2,5,6,7,8,9,10,12,13,14,16,17,18,19,20,21,22,24,31,32)             ##### NEED TO REMOVE THIS LATER
 
@@ -95,7 +97,10 @@ ui <- navbarPage("Suburb Similarity",
                  ),
                  tabPanel("Suburbs",
                           sidebarLayout(
-                              sidebarPanel(
+                              sidebarPanel(htmlOutput("year"),
+                                           htmlOutput("sa4_selector"),
+                                           htmlOutput("sa3_selector"),
+                                           htmlOutput("suburb_selector")
                               ),
                               # Show a plot of the generated distribution
                               mainPanel(
@@ -108,7 +113,7 @@ ui <- navbarPage("Suburb Similarity",
 # [2] ---- Define Server ----
 server <- function(input, output) {
 
-    #### Establish the Reactive UI components
+    #### Establish the Reactive UI components for the 'Selections' tab
     
     output$calculate = renderUI({
         actionButton(inputId = "calculate", label = "Calculate Similarity")
@@ -264,7 +269,61 @@ server <- function(input, output) {
                     value = scaler %>% filter(variable == "apartment_median_suburb") %>% select(mean) %>% pull())
     })
     
-    ##### Calculate the Similarity scores
+    #### Establish the Reactive UI components for the 'Selections' tab      
+     
+    output$sa4_selector = renderUI({
+        selectInput(inputId = "sa4", 
+                    label = "SA4:", 
+                    choices = list("Greater Sydney" = list("Central Coast",
+                                                           "Sydney - Baulkham Hills and Hawkesbury",
+                                                           "Sydney - Blacktown",
+                                                           "Sydney - City and Inner South",
+                                                           "Sydney - Eastern Suburbs",
+                                                           "Sydney - Inner South West",
+                                                           "Sydney - Inner West",                   
+                                                           "Sydney - North Sydney and Hornsby",
+                                                           "Sydney - Northern Beaches",           
+                                                           "Sydney - Outer South West",
+                                                           "Sydney - Outer West and Blue Mountains",
+                                                           "Sydney - Parramatta",                  
+                                                           "Sydney - Ryde",          
+                                                           "Sydney - South West",
+                                                           "Sydney - Sutherland"),
+                                   "Rest of NSW" = list("Capital Region",
+                                                        "Central West", 
+                                                        "Coffs Harbour - Grafton",
+                                                        "Far West and Orana",
+                                                        "Hunter Valley exc Newcastle",
+                                                        "Illawarra",
+                                                        "Mid North Coast",
+                                                        "Murray",
+                                                        "New England and North West",
+                                                        "Newcastle and Lake Macquarie",
+                                                        "Richmond - Tweed",
+                                                        "Riverina",
+                                                        "Southern Highlands and Shoalhaven")),
+                    selected = 1)
+        })
+        output$sa3_selector = renderUI({
+            selectInput(inputId = "sa3", #name of input
+                        label = "SA3:", #label displayed in UI
+                        choices = choices %>% filter(sa4_name == input$sa4) %>% distinct(sa3_name) %>% arrange(sa3_name),
+                        selected = 1)
+        })
+        output$suburb_selector = renderUI({
+            selectInput(inputId = "suburb",
+                        label = "Suburb:",
+                        choices = choices %>% filter(sa3_name == input$sa3) %>% distinct(suburb_name) %>% arrange(suburb_name),
+                        selected = 1)
+        })
+        output$year = renderUI({
+            selectInput(inputId = "year",
+                        label = "Year:",
+                        choices = c(2019,2018,2017,2016,2015,2014,2013,2012,2011,2010,2009,2008,2007,2006),
+                        selected = 1)
+        })                               
+                             
+    ##### Calculate the Similarity scores tab
     
     observeEvent(input$reset,{
         updateSliderInput(session,'number',value = 10)
@@ -352,6 +411,8 @@ server <- function(input, output) {
                         popup = popupTable(map_small,  zcol = c(2,4:10,43),feature.id = FALSE, row.numbers = FALSE))
     })
     
+    ##### Calculate the Suburb Similarity Tab
+                             
     output$map_2 <- renderLeaflet({
         leaflet(map) %>%
             addTiles() %>%
