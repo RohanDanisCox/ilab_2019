@@ -498,20 +498,37 @@
            economic_resources_index, education_and_occupation_index, # SEIFA
            median_land_value,median_land_value_per_sqm, # Land Values
            aria_overall, aria_education, aria_health, aria_shopping, aria_public_transport, aria_financial_postal, # ARIA
-           house_median_suburb, apartment_median_suburb, land_median_suburb, annual_turnover, # Property Prices
-    ) %>%
+           house_median_suburb, apartment_median_suburb, land_median_suburb, annual_turnover) # Property Prices
+  
+  select_suburb_subset <- suburb_subset %>%
     filter(year == 2019)
   
-  map <- nsw %>%
-    left_join(suburb_subset, by = c("suburb_code", "suburb_name")) 
+  comparison_suburb_subset <- suburb_subset %>%
+    filter(year >= 2006)
   
-  scaled_data <- suburb_subset %>%
+  map <- nsw %>%
+    left_join(select_suburb_subset, by = c("suburb_code", "suburb_name")) 
+  
+  select_scaled_data <- select_suburb_subset %>%
     select(2,7:39) %>%
     mutate_if(is.numeric,scale)
   
-  names(scaled_data)
-  ?setView
-  scaling_data <- suburb_subset %>%
+  comparison_scaled_data <- comparison_suburb_subset %>%
+    select(2,3,7:39) %>%
+    mutate(year = as.character(year)) %>%
+    mutate_if(is.numeric,scale) %>%
+    mutate(year = as.numeric(year))
+
+  select_scaling_data <- select_suburb_subset %>%
+    select(7:39) %>%
+    map_df(~(data.frame(min = min(.x, na.rm = TRUE),
+                        max = max(.x, na.rm = TRUE),
+                        mean = mean(.x,na.rm = TRUE),
+                        sd = sd(.x, na.rm = TRUE),
+                        na_count = sum(is.na(.x)))),
+           .id = "variable")
+  
+  comparison_scaling_data <- comparison_suburb_subset %>%
     select(7:39) %>%
     map_df(~(data.frame(min = min(.x, na.rm = TRUE),
                         max = max(.x, na.rm = TRUE),
@@ -532,8 +549,10 @@
   object_size(simple_map)
   
   saveRDS(simple_map,"similarity_app/data/simple_map.rds")
-  saveRDS(scaled_data,"similarity_app/data/scaled_data.rds")
-  saveRDS(scaling_data,"similarity_app/data/scaling_data.rds")
+  saveRDS(select_scaled_data,"similarity_app/data/select_scaled_data.rds")
+  saveRDS(select_scaling_data,"similarity_app/data/select_scaling_data.rds")
+  saveRDS(comparison_scaled_data,"similarity_app/data/comparison_scaled_data.rds")
+  saveRDS(comparison_scaling_data,"similarity_app/data/comparison_scaling_data.rds")
   
   # [2b] ---- Testing Objects ----
   
