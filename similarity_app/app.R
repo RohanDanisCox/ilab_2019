@@ -61,6 +61,8 @@ comparison_scaler <- readRDS("data/comparison_scaling_data.rds") %>%
 data <- map %>%
     st_drop_geometry()
 
+data_sources <- readRDS("data/data_sources.rds")
+
 ## Function to calculate similarity despite NA's
 rdist_na <- function(X,Y){
     if (!is.matrix(X)) 
@@ -144,43 +146,7 @@ server <- function(input, output) {
 
     ### Build the table to include in the introduction page
     
-    output$intro_table <- renderDataTable(escape = FALSE,
-                                      tibble(`Data Set` = c("Property Sale Information",
-                                                      "Property Land Information",
-                                                      "NSW Suburb Boundaries (ESRI Shapefile)",
-                                                      "Australia ASGS Digital Boundaries (ESRI Shapefile)",
-                                                      "Recorded Crime by Offence",
-                                                      "SEIFA",
-                                                      "Census",
-                                                      "NSW Government Schools",
-                                                      "NSW Non-Government Schools",
-                                                      "Mesh Blocks",
-                                                      "ASGS/ASGC Geographic Correspondences",
-                                                      "Metro ARIA"),
-                                             Source = c('<a href="https://valuation.property.nsw.gov.au/embed/propertySalesInformation/">NSW Valuer General</a>',
-                                                      '<a href="https://valuation.property.nsw.gov.au/embed/propertySalesInformation/">NSW Valuer General</a>',
-                                                      '<a href="https://data.gov.au/dataset/ds-dga-bdcf5b09-89bc-47ec-9281-6b8e9ee147aa/details?q=PSMA%20administrative%20boundaries">PSMA Australia Limited</a>',
-                                                      '<a href="https://www.abs.gov.au/AUSSTATS/abs@.nsf/DetailsPage/1270.0.55.001July%202016?OpenDocument">Australian Bureau of Statistics (ABS)</a>',
-                                                      '<a href="https://www.bocsar.nsw.gov.au/Pages/bocsar_datasets/Datasets-.aspx">Bureau of Crime Statistics and Research (BOCSAR)</a>',
-                                                      '<a href="https://www.abs.gov.au/ausstats/abs@.nsf/mf/2033.0.55.001">Australian Bureau of Statistics (ABS)</a>',
-                                                      '<a href="https://www.abs.gov.au/websitedbs/censushome.nsf/home/tablebuilder?opendocument&amp;navpos=240">Australian Bureau of Statistics (ABS) - Table Builder</a>',
-                                                      '<a href="https://data.aurin.org.au/dataset/nsw-govt-de-nsw-school-locations-2016-na">NSW Department of Education</a>',
-                                                      '<a href="https://data.cese.nsw.gov.au/data/dataset/nsw-non-government-school-locations-and-descriptions">NSW Department of Education</a>',
-                                                      '<a href="https://www.abs.gov.au/AUSSTATS/abs@.nsf/DetailsPage/1270.0.55.001July%202016?OpenDocument">Australian Bureau of Statistics (ABS)</a>',
-                                                      '<a href="https://data.gov.au/dataset/ds-dga-23fe168c-09a7-42d2-a2f9-fd08fbd0a4ce/details?q=ASGS%202016%20correspondence">data.gov.au</a>',
-                                                      '<a href="https://data.aurin.org.au/dataset/ua-hcmpr-adh-hcmpr-sa1-metro-aria-2014-australia-sa1">Hugo Centre for Migration and Population Research at the University of Adelaide</a>'),
-                                             License = c("Creative Commons Attribution 4.0",
-                                                         "Creative Commons Attribution 4.0",
-                                                         "Creative Commons Attribution 2.5",
-                                                         "Creative Commons Attribution 4.0",
-                                                         "Creative Commons Attribution 2.5",
-                                                         "Creative Commons Attribution 2.5",
-                                                         "Creative Commons Attribution 3.0",
-                                                         "Creative Commons Attribution 3.0",
-                                                         "Creative Commons Attribution 2.5",
-                                                         "Creative Commons Attribution 2.5",
-                                                         "Creative Commons Attribution 2.5",
-                                                         "Creative Commons Attribution-NonCommercial 4.0")))
+    output$intro_table <- renderDataTable(escape = FALSE, data_sources)
     
     #### Establish the Reactive UI components for the 'Select' tab
     
