@@ -510,11 +510,11 @@
     left_join(select_suburb_subset, by = c("suburb_code", "suburb_name")) 
   
   select_scaled_data <- select_suburb_subset %>%
-    select(2,7:39) %>%
+    select(2,4:39) %>%
     mutate_if(is.numeric,scale)
   
   comparison_scaled_data <- comparison_suburb_subset %>%
-    select(2,3,7:39) %>%
+    select(2:39) %>%
     mutate(year = as.character(year)) %>%
     mutate_if(is.numeric,scale) %>%
     mutate(year = as.numeric(year))

@@ -134,16 +134,32 @@
   ## Census data - as C
   
   c1 <- interpolate_extrapolate_lag(census_scores,confirmed_population)
-  c2 <- interpolate_extrapolate_lag(census_scores,working_age_proportion)
-  c3 <- interpolate_extrapolate_lag(census_scores,senior_citizen_proportion)
-  c4 <- interpolate_extrapolate_lag(census_scores,confirmed_journeys)
-  c5 <- interpolate_extrapolate_lag(census_scores,public_transport_proportion)
-  c6 <- interpolate_extrapolate_lag(census_scores,motor_vehicle_proportion)
-  c7 <- interpolate_extrapolate_lag(census_scores,bicycle_walking_proportion)
+  c2 <- interpolate_extrapolate_lag(census_scores,working_age_proportion) %>% 
+    mutate(working_age_proportion = case_when(working_age_proportion > 1 ~ 1,
+                                              TRUE ~ working_age_proportion))
+  c3 <- interpolate_extrapolate_lag(census_scores,senior_citizen_proportion) %>%
+    mutate(senior_citizen_proportion = case_when(senior_citizen_proportion > 1 ~ 1,
+                                              TRUE ~ senior_citizen_proportion))
+  c4 <- interpolate_extrapolate_lag(census_scores,confirmed_journeys) 
+  c5 <- interpolate_extrapolate_lag(census_scores,public_transport_proportion) %>%
+    mutate(public_transport_proportion = case_when(public_transport_proportion > 1 ~ 1,
+                                          TRUE ~ public_transport_proportion))
+  c6 <- interpolate_extrapolate_lag(census_scores,motor_vehicle_proportion)%>%
+    mutate(motor_vehicle_proportion = case_when(motor_vehicle_proportion > 1 ~ 1,
+                                          TRUE ~ motor_vehicle_proportion))
+  c7 <- interpolate_extrapolate_lag(census_scores,bicycle_walking_proportion)%>%
+    mutate(bicycle_walking_proportion = case_when(bicycle_walking_proportion > 1 ~ 1,
+                                          TRUE ~ bicycle_walking_proportion))
   c8 <- interpolate_extrapolate_lag(census_scores,confirmed_dwellings)
-  c9 <- interpolate_extrapolate_lag(census_scores,house_and_semi_proportion)
-  c10 <- interpolate_extrapolate_lag(census_scores,unit_proportion)
-  c11 <- interpolate_extrapolate_lag(census_scores,other_proportion)
+  c9 <- interpolate_extrapolate_lag(census_scores,house_and_semi_proportion)%>%
+    mutate(house_and_semi_proportion = case_when(house_and_semi_proportion > 1 ~ 1,
+                                          TRUE ~ house_and_semi_proportion))
+  c10 <- interpolate_extrapolate_lag(census_scores,unit_proportion)%>%
+    mutate(unit_proportion = case_when(unit_proportion > 1 ~ 1,
+                                          TRUE ~ unit_proportion))
+  c11 <- interpolate_extrapolate_lag(census_scores,other_proportion)%>%
+    mutate(other_proportion = case_when(other_proportion > 1 ~ 1,
+                                          TRUE ~ other_proportion))
   
   census <- c1 %>%
     left_join(c2,by = c("suburb_code", "suburb_name", "year")) %>%

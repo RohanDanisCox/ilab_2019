@@ -24,7 +24,7 @@ map <- readRDS("data/simple_map.rds")
 choices <- readRDS("data/choices.rds")
 
 select_scaled_data <- readRDS("data/select_scaled_data.rds") %>%
-    select(suburb_name,suburb_area_sqkm,log_crime_score,education_score,green_score_decile,
+    select(suburb_name,sa2_name,sa3_name,sa4_name,suburb_area_sqkm,log_crime_score,education_score,green_score_decile,
            usual_resident_population,working_age_proportion,senior_citizen_proportion,
            public_transport_proportion,motor_vehicle_proportion,bicycle_walking_proportion,
            house_and_semi_proportion,unit_proportion,dwelling_density,
@@ -42,7 +42,7 @@ select_scaler <- readRDS("data/select_scaling_data.rds") %>%
                            "median_land_value_per_sqm","house_median_suburb","apartment_median_suburb")) ##### NEED TO REMOVE THIS LATER
 
 comparison_scaled_data <- readRDS("data/comparison_scaled_data.rds") %>%
-    select(suburb_name,year,suburb_area_sqkm,log_crime_score,education_score,green_score_decile,
+    select(suburb_name,sa2_name,sa3_name,sa4_name,year,suburb_area_sqkm,log_crime_score,education_score,green_score_decile,
            usual_resident_population,working_age_proportion,senior_citizen_proportion,
            public_transport_proportion,motor_vehicle_proportion,bicycle_walking_proportion,
            house_and_semi_proportion,unit_proportion,dwelling_density,
@@ -390,7 +390,7 @@ server <- function(input, output) {
             mutate(similarity = 1/(1+(distance/20)))
         
         combined <- suburb %>% 
-            select(suburb_name) %>%
+            select(suburb_name,sa2_name,sa3_name,sa4_name,) %>%
             cbind(dist) 
         
         combined
@@ -417,7 +417,7 @@ server <- function(input, output) {
             arrange(desc(similarity)) %>%
             head(n=number_of_suburbs())
         map_small <- map %>%
-            left_join(top_n,by = "suburb_name") %>%
+            left_join(top_n,by = c("suburb_name","sa2_name","sa3_name","sa4_name")) %>%
             filter(!is.na(similarity)) %>%
             arrange(desc(similarity))
         top <- map_small %>%
@@ -436,7 +436,7 @@ server <- function(input, output) {
                         color = "black",
                         opacity = 1,
                         fillOpacity = 0.8,
-                        popup = leafpop::popupTable(map_small,  zcol = c(2,4:10,42),feature.id = FALSE, row.numbers = FALSE))
+                        popup = leafpop::popupTable(map_small,  zcol = c(2,8,11:16,18:20,22:28,30,37,38,42),feature.id = FALSE, row.numbers = FALSE))
     })
     
     ##### Calculate the Suburb Similarity Tab
@@ -450,12 +450,12 @@ server <- function(input, output) {
             filter(year == 2019) %>%
             filter(suburb_name != input$suburb)
         
-        dist <- as.data.frame(rdist_na(scaled_values[,3:22],other_suburbs[,3:22])) %>%
+        dist <- as.data.frame(rdist_na(scaled_values[,6:25],other_suburbs[,6:25])) %>%
             rename(distance = V1) %>%
             mutate(similarity = 1/(1+(distance/20)))
         
         combined <- other_suburbs %>% 
-            select(suburb_name) %>%
+            select(suburb_name,sa2_name,sa3_name,sa4_name) %>%
             cbind(dist) 
         
         combined
@@ -482,7 +482,7 @@ server <- function(input, output) {
             arrange(desc(similarity)) %>%
             head(n=number_of_suburbs_2())
         map_small <- map %>%
-            left_join(top_n,by = "suburb_name") %>%
+            left_join(top_n,by = c("suburb_name","sa2_name","sa3_name","sa4_name")) %>%
             filter(!is.na(similarity)) %>%
             arrange(desc(similarity))
         top <- map_small %>%
@@ -501,7 +501,7 @@ server <- function(input, output) {
                         color = "black",
                         opacity = 1,
                         fillOpacity = 0.8,
-                        popup = leafpop::popupTable(map_small,  zcol = c(2,4:10,42),feature.id = FALSE, row.numbers = FALSE))
+                        popup = leafpop::popupTable(map_small,  zcol = c(2,8,11:16,18:20,22:28,30,37,38,42),feature.id = FALSE, row.numbers = FALSE))
     })
 }
 
