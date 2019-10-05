@@ -86,10 +86,10 @@
            Number_of_Dwellings = confirmed_dwellings, 
            Proportion_of_House = house_and_semi_proportion,
            Proportion_of_Units = unit_proportion,
-           SEIFA_Socio_Economic_Disadvantage = relative_socio_economic_disadvantage_index,
-           SEIFA_Socio_Economic_Advantage_Disadvantage = relative_socio_economic_adv_disadv_index,
-           SEIFA_Economic_Resources = economic_resources_index,
-           SEIFA_Education_and_Occupation = education_and_occupation_index,
+           SEIFA_Socio_Economic_Disadvantage = seifa_econ_disadvantage,
+           SEIFA_Socio_Economic_Advantage_Disadvantage = seifa_econ_adv_disadv,
+           SEIFA_Economic_Resources = seifa_econ_resources,
+           SEIFA_Education_and_Occupation = seifa_education_occupation,
            Number_of_Properties = number_of_properties,
            Median_Land_Value = median_land_value,
            Median_Land_Value_Per_Sq_M = median_land_value_per_sqm,
@@ -124,10 +124,10 @@
               Number_of_Dwellings = weighted.mean(confirmed_dwellings, usual_resident_population, na.rm = TRUE), 
               Proportion_of_House = weighted.mean(house_and_semi_proportion, usual_resident_population, na.rm = TRUE),
               Proportion_of_Units = weighted.mean(unit_proportion, usual_resident_population, na.rm = TRUE),
-              SEIFA_Socio_Economic_Disadvantage = weighted.mean(relative_socio_economic_disadvantage_index, usual_resident_population, na.rm = TRUE),
-              SEIFA_Socio_Economic_Advantage_Disadvantage = weighted.mean(relative_socio_economic_adv_disadv_index, usual_resident_population, na.rm = TRUE),
-              SEIFA_Economic_Resources = weighted.mean(economic_resources_index, usual_resident_population, na.rm = TRUE),
-              SEIFA_Education_and_Occupation = weighted.mean(education_and_occupation_index, usual_resident_population, na.rm = TRUE),
+              SEIFA_Socio_Economic_Disadvantage = weighted.mean(seifa_econ_disadvantage, usual_resident_population, na.rm = TRUE),
+              SEIFA_Socio_Economic_Advantage_Disadvantage = weighted.mean(seifa_econ_adv_disadv, usual_resident_population, na.rm = TRUE),
+              SEIFA_Economic_Resources = weighted.mean(seifa_econ_resources, usual_resident_population, na.rm = TRUE),
+              SEIFA_Education_and_Occupation = weighted.mean(seifa_education_occupation, usual_resident_population, na.rm = TRUE),
               Number_of_Properties = weighted.mean(number_of_properties, usual_resident_population, na.rm = TRUE),
               Median_Land_Value = weighted.mean(median_land_value, usual_resident_population, na.rm = TRUE),
               Median_Land_Value_Per_Sq_M = weighted.mean(median_land_value_per_sqm, usual_resident_population, na.rm = TRUE),
@@ -162,10 +162,10 @@
               Number_of_Dwellings = weighted.mean(confirmed_dwellings, usual_resident_population, na.rm = TRUE), 
               Proportion_of_House = weighted.mean(house_and_semi_proportion, usual_resident_population, na.rm = TRUE),
               Proportion_of_Units = weighted.mean(unit_proportion, usual_resident_population, na.rm = TRUE),
-              SEIFA_Socio_Economic_Disadvantage = weighted.mean(relative_socio_economic_disadvantage_index, usual_resident_population, na.rm = TRUE),
-              SEIFA_Socio_Economic_Advantage_Disadvantage = weighted.mean(relative_socio_economic_adv_disadv_index, usual_resident_population, na.rm = TRUE),
-              SEIFA_Economic_Resources = weighted.mean(economic_resources_index, usual_resident_population, na.rm = TRUE),
-              SEIFA_Education_and_Occupation = weighted.mean(education_and_occupation_index, usual_resident_population, na.rm = TRUE),
+              SEIFA_Socio_Economic_Disadvantage = weighted.mean(seifa_econ_disadvantage, usual_resident_population, na.rm = TRUE),
+              SEIFA_Socio_Economic_Advantage_Disadvantage = weighted.mean(seifa_econ_adv_disadv, usual_resident_population, na.rm = TRUE),
+              SEIFA_Economic_Resources = weighted.mean(seifa_econ_resources, usual_resident_population, na.rm = TRUE),
+              SEIFA_Education_and_Occupation = weighted.mean(seifa_education_occupation, usual_resident_population, na.rm = TRUE),
               Number_of_Properties = weighted.mean(number_of_properties, usual_resident_population, na.rm = TRUE),
               Median_Land_Value = weighted.mean(median_land_value, usual_resident_population, na.rm = TRUE),
               Median_Land_Value_Per_Sq_M = weighted.mean(median_land_value_per_sqm, usual_resident_population, na.rm = TRUE),
@@ -200,10 +200,10 @@
               Number_of_Dwellings = weighted.mean(confirmed_dwellings, usual_resident_population, na.rm = TRUE), 
               Proportion_of_House = weighted.mean(house_and_semi_proportion, usual_resident_population, na.rm = TRUE),
               Proportion_of_Units = weighted.mean(unit_proportion, usual_resident_population, na.rm = TRUE),
-              SEIFA_Socio_Economic_Disadvantage = weighted.mean(relative_socio_economic_disadvantage_index, usual_resident_population, na.rm = TRUE),
-              SEIFA_Socio_Economic_Advantage_Disadvantage = weighted.mean(relative_socio_economic_adv_disadv_index, usual_resident_population, na.rm = TRUE),
-              SEIFA_Economic_Resources = weighted.mean(economic_resources_index, usual_resident_population, na.rm = TRUE),
-              SEIFA_Education_and_Occupation = weighted.mean(education_and_occupation_index, usual_resident_population, na.rm = TRUE),
+              SEIFA_Socio_Economic_Disadvantage = weighted.mean(seifa_econ_disadvantage, usual_resident_population, na.rm = TRUE),
+              SEIFA_Socio_Economic_Advantage_Disadvantage = weighted.mean(seifa_econ_adv_disadv, usual_resident_population, na.rm = TRUE),
+              SEIFA_Economic_Resources = weighted.mean(seifa_econ_resources, usual_resident_population, na.rm = TRUE),
+              SEIFA_Education_and_Occupation = weighted.mean(seifa_education_occupation, usual_resident_population, na.rm = TRUE),
               Number_of_Properties = weighted.mean(number_of_properties, usual_resident_population, na.rm = TRUE),
               Median_Land_Value = weighted.mean(median_land_value, usual_resident_population, na.rm = TRUE),
               Median_Land_Value_Per_Sq_M = weighted.mean(median_land_value_per_sqm, usual_resident_population, na.rm = TRUE),
@@ -279,8 +279,8 @@
            usual_resident_population,working_age_proportion,senior_citizen_proportion, # Demographics 
            confirmed_journeys,public_transport_proportion,motor_vehicle_proportion, bicycle_walking_proportion, # Transport
            confirmed_dwellings, house_and_semi_proportion, unit_proportion, dwelling_density, # Dwellings
-           relative_socio_economic_disadvantage_index, relative_socio_economic_adv_disadv_index, # SEIFA
-           economic_resources_index, education_and_occupation_index, # SEIFA
+           seifa_econ_disadvantage, seifa_econ_adv_disadv, # SEIFA
+           seifa_econ_resources, seifa_education_occupation, # SEIFA
            median_land_value,median_land_value_per_sqm, # Land Values
            aria_overall, aria_education, aria_health, aria_shopping, aria_public_transport, aria_financial_postal, # ARIA
            house_median_suburb, apartment_median_suburb, land_median_suburb, annual_turnover, # Property Prices
@@ -334,7 +334,7 @@
   
   pal_SEIFA_3 <- colorNumeric(
     palette = c("white","purple"),
-    domain = simple_map$economic_resources_index)
+    domain = simple_map$seifa_econ_resources)
   
   pal_land <- colorNumeric( ###### Cant use this as there are infinite values
     palette = c("white","darkgreen"),
@@ -374,7 +374,7 @@
                group = "Green Space") %>%
     addPolygons(data = simple_map,
                weight = 1, 
-               fillColor = ~pal_SEIFA_3(economic_resources_index), 
+               fillColor = ~pal_SEIFA_3(seifa_econ_resources), 
                color = "black",
                opacity = 1,
                fillOpacity = 0.8,
@@ -494,8 +494,8 @@
            usual_resident_population,working_age_proportion,senior_citizen_proportion, # Demographics 
            confirmed_journeys,public_transport_proportion,motor_vehicle_proportion, bicycle_walking_proportion, # Transport
            confirmed_dwellings, house_and_semi_proportion, unit_proportion, dwelling_density, # Dwellings
-           relative_socio_economic_disadvantage_index, relative_socio_economic_adv_disadv_index, # SEIFA
-           economic_resources_index, education_and_occupation_index, # SEIFA
+           seifa_econ_disadvantage, seifa_econ_adv_disadv, # SEIFA
+           seifa_econ_resources, seifa_education_occupation, # SEIFA
            median_land_value,median_land_value_per_sqm, # Land Values
            aria_overall, aria_education, aria_health, aria_shopping, aria_public_transport, aria_financial_postal, # ARIA
            house_median_suburb, apartment_median_suburb, land_median_suburb, annual_turnover) # Property Prices
@@ -579,7 +579,7 @@
     select(min) %>%
     pull()
     
-  scaler <- scaling_data %>%
+  scaler <- select_scaling_data %>%
     filter(variable %in% c("suburb_area_sqkm","log_crime_score","education_score","green_score_decile")) ##### NEED TO REMOVE THIS LATER
   
   new_values <- tibble(new_values = c(10,3,4,4)) %>%
@@ -590,7 +590,9 @@
       select(scaled_value) %>% 
       t()
     
-  suburb <- scaled_data %>%
+  suburb <- select_scaled_data
+    
+    
     select(1,2,5,6,7) 
   
   a <- as.data.frame(rdist::cdist(suburb[,2:5],new)) 
@@ -616,6 +618,7 @@
     c <- as.data.frame(rdist.w.na(new,suburb[,2:5])) 
     
     test <- c %>%
+      group_by
       mutate(divisor = 1/V1) %>%
       mutate(normalise = (divisor - min(divisor, na.rm = TRUE))/ (max(divisor, na.rm = TRUE) - min(divisor, na.rm = TRUE)))
     combined <- suburb %>% 
@@ -632,4 +635,58 @@
       st_centroid(geometry)
     
     centre$geometry[[1]][1]
+    
+    
+    
+### Trying to find haberfield
+    
+    select_scaler <- readRDS("similarity_app/data/select_scaling_data.rds") %>%
+      filter(variable %in% c("suburb_area_sqkm","log_crime_score","education_score","green_score_decile",
+                             "usual_resident_population","working_age_proportion","senior_citizen_proportion",
+                             "public_transport_proportion","motor_vehicle_proportion","bicycle_walking_proportion",
+                             "house_and_semi_proportion","unit_proportion","dwelling_density",
+                             "seifa_econ_disadvantage","seifa_econ_adv_disadv",
+                             "seifa_econ_resources","seifa_education_occupation",
+                             "median_land_value_per_sqm","house_median_suburb","apartment_median_suburb")) 
+    
+    select_scaled_data <- readRDS("similarity_app/data/select_scaled_data.rds") %>%
+      select(suburb_name,sa2_name,sa3_name,sa4_name,suburb_area_sqkm,log_crime_score,education_score,green_score_decile,
+             usual_resident_population,working_age_proportion,senior_citizen_proportion,
+             public_transport_proportion,motor_vehicle_proportion,bicycle_walking_proportion,
+             house_and_semi_proportion,unit_proportion,dwelling_density,
+             seifa_econ_disadvantage,seifa_econ_adv_disadv,
+             seifa_econ_resources,seifa_education_occupation,
+             median_land_value_per_sqm,house_median_suburb,apartment_median_suburb) 
+    
+    new <- tibble(new_values = c(2.2,8.43,4,2,6300,0.62,0.18,0.28,
+                                 0.64,0.06,0.92,0.04,952,1068,1131,
+                                 1087,1115,2759,1870000,763000)) %>%
+      cbind(select_scaler) %>%
+      mutate(scaled_value = (new_values - mean) / sd) %>%
+      select(scaled_value) %>% 
+      t()
+    
+    suburb <- select_scaled_data
+    
+    na_count <- select_scaled_data %>%
+      mutate(na_count = rowSums(is.na(select_scaled_data))) %>%
+      select(na_count)
+    
+    dist <- as.data.frame(rdist_na(new,suburb[,2:21])) %>%
+      rename(distance = V1) %>%
+      #cbind(na_count) %>%
+      #mutate(similarity = round(1/(1+(distance/(20))),4))
+      mutate(similarity = 1/(1+(distance/(20))))
+    
+    combined <- suburb %>% 
+      select(suburb_name,sa2_name,sa3_name,sa4_name,) %>%
+      cbind(dist) 
+    
+    combined
+    
+    ## Create a tibble 
+    
+    check <- tibble(test = c("test1","test2"),
+                    link = c("test1","test2"))
+    
     

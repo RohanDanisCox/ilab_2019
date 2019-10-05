@@ -1,0 +1,18 @@
+---
+title: "Similarity App"
+author: "Rohan Danis-Cox"
+date: "28/09/2019"
+output:
+  html_document: default
+---
+<br>
+This application serves two functions, which can be seen on each of the tabs above.
+
+* The first tab allow users to choose a value for various measures and see similar suburbs are in 2019 to the selected value. 
+* The second tab allows users to select a year and a suburb and see other similar suburbs to the selection.  
+
+Full code can be found here: <https://github.com/RohanDanisCox/ilab_2019/>
+
+My blog describing the activities take is availabel here: <https://16-3327.ca.uts.edu.au/ilab-1-2019/>
+
+This application makes use of the Leaflet mapping package and combines data from the following sources:

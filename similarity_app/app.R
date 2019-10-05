@@ -14,7 +14,6 @@ library(shinycssloaders)
 library(markdown)
 library(RColorBrewer)
 library(pdist)
-library(dqshiny)
 library(shinyjs)
 
 # [1] ---- Load global data ----
@@ -28,8 +27,8 @@ select_scaled_data <- readRDS("data/select_scaled_data.rds") %>%
            usual_resident_population,working_age_proportion,senior_citizen_proportion,
            public_transport_proportion,motor_vehicle_proportion,bicycle_walking_proportion,
            house_and_semi_proportion,unit_proportion,dwelling_density,
-           relative_socio_economic_disadvantage_index,relative_socio_economic_adv_disadv_index,
-           economic_resources_index,education_and_occupation_index,
+           seifa_econ_disadvantage,seifa_econ_adv_disadv,
+           seifa_econ_resources,seifa_education_occupation,
            median_land_value_per_sqm,house_median_suburb,apartment_median_suburb)              ##### NEED TO REMOVE THIS LATER
 
 select_scaler <- readRDS("data/select_scaling_data.rds") %>%
@@ -37,8 +36,8 @@ select_scaler <- readRDS("data/select_scaling_data.rds") %>%
                            "usual_resident_population","working_age_proportion","senior_citizen_proportion",
                            "public_transport_proportion","motor_vehicle_proportion","bicycle_walking_proportion",
                            "house_and_semi_proportion","unit_proportion","dwelling_density",
-                           "relative_socio_economic_disadvantage_index","relative_socio_economic_adv_disadv_index",
-                           "economic_resources_index","education_and_occupation_index",
+                           "seifa_econ_disadvantage","seifa_econ_adv_disadv",
+                           "seifa_econ_resources","seifa_education_occupation",
                            "median_land_value_per_sqm","house_median_suburb","apartment_median_suburb")) ##### NEED TO REMOVE THIS LATER
 
 comparison_scaled_data <- readRDS("data/comparison_scaled_data.rds") %>%
@@ -46,8 +45,8 @@ comparison_scaled_data <- readRDS("data/comparison_scaled_data.rds") %>%
            usual_resident_population,working_age_proportion,senior_citizen_proportion,
            public_transport_proportion,motor_vehicle_proportion,bicycle_walking_proportion,
            house_and_semi_proportion,unit_proportion,dwelling_density,
-           relative_socio_economic_disadvantage_index,relative_socio_economic_adv_disadv_index,
-           economic_resources_index,education_and_occupation_index,
+           seifa_econ_disadvantage,seifa_econ_adv_disadv,
+           seifa_econ_resources,seifa_education_occupation,
            median_land_value_per_sqm,house_median_suburb,apartment_median_suburb)               ##### NEED TO REMOVE THIS LATER
 
 comparison_scaler <- readRDS("data/comparison_scaling_data.rds") %>%
@@ -55,8 +54,8 @@ comparison_scaler <- readRDS("data/comparison_scaling_data.rds") %>%
                            "usual_resident_population","working_age_proportion","senior_citizen_proportion",
                            "public_transport_proportion","motor_vehicle_proportion","bicycle_walking_proportion",
                            "house_and_semi_proportion","unit_proportion","dwelling_density",
-                           "relative_socio_economic_disadvantage_index","relative_socio_economic_adv_disadv_index",
-                           "economic_resources_index","education_and_occupation_index",
+                           "seifa_econ_disadvantage","seifa_econ_adv_disadv",
+                           "seifa_econ_resources","seifa_education_occupation",
                            "median_land_value_per_sqm","house_median_suburb","apartment_median_suburb")) ##### NEED TO REMOVE THIS LATER
 
 data <- map %>%
@@ -82,11 +81,10 @@ rdist_na <- function(X,Y){
 ui <- navbarPage("Suburb Similarity",
                  tabPanel("Introduction",
                           titlePanel("Welcome to the Suburb Similarity Application"),
-                          fluidRow(column(12,
-                                          includeMarkdown("data/markdown.Rmd")
-                                          )
-                                   )
-                          ),
+                          fluidRow(column(10, offset = 1,
+                                          includeMarkdown("data/markdown.Rmd"),
+                                          dataTableOutput("intro_table")))
+                 ),
                  tabPanel("Compare to Selection",
                           sidebarLayout(
                               sidebarPanel(
@@ -144,6 +142,46 @@ ui <- navbarPage("Suburb Similarity",
 # [2] ---- Define Server ----
 server <- function(input, output) {
 
+    ### Build the table to include in the introduction page
+    
+    output$intro_table <- renderDataTable(escape = FALSE,
+                                      tibble(`Data Set` = c("Property Sale Information",
+                                                      "Property Land Information",
+                                                      "NSW Suburb Boundaries (ESRI Shapefile)",
+                                                      "Australia ASGS Digital Boundaries (ESRI Shapefile)",
+                                                      "Recorded Crime by Offence",
+                                                      "SEIFA",
+                                                      "Census",
+                                                      "NSW Government Schools",
+                                                      "NSW Non-Government Schools",
+                                                      "Mesh Blocks",
+                                                      "ASGS/ASGC Geographic Correspondences",
+                                                      "Metro ARIA"),
+                                             Source = c('<a href="https://valuation.property.nsw.gov.au/embed/propertySalesInformation/">NSW Valuer General</a>',
+                                                      '<a href="https://valuation.property.nsw.gov.au/embed/propertySalesInformation/">NSW Valuer General</a>',
+                                                      '<a href="https://data.gov.au/dataset/ds-dga-bdcf5b09-89bc-47ec-9281-6b8e9ee147aa/details?q=PSMA%20administrative%20boundaries">PSMA Australia Limited</a>',
+                                                      '<a href="https://www.abs.gov.au/AUSSTATS/abs@.nsf/DetailsPage/1270.0.55.001July%202016?OpenDocument">Australian Bureau of Statistics (ABS)</a>',
+                                                      '<a href="https://www.bocsar.nsw.gov.au/Pages/bocsar_datasets/Datasets-.aspx">Bureau of Crime Statistics and Research (BOCSAR)</a>',
+                                                      '<a href="https://www.abs.gov.au/ausstats/abs@.nsf/mf/2033.0.55.001">Australian Bureau of Statistics (ABS)</a>',
+                                                      '<a href="https://www.abs.gov.au/websitedbs/censushome.nsf/home/tablebuilder?opendocument&amp;navpos=240">Australian Bureau of Statistics (ABS) - Table Builder</a>',
+                                                      '<a href="https://data.aurin.org.au/dataset/nsw-govt-de-nsw-school-locations-2016-na">NSW Department of Education</a>',
+                                                      '<a href="https://data.cese.nsw.gov.au/data/dataset/nsw-non-government-school-locations-and-descriptions">NSW Department of Education</a>',
+                                                      '<a href="https://www.abs.gov.au/AUSSTATS/abs@.nsf/DetailsPage/1270.0.55.001July%202016?OpenDocument">Australian Bureau of Statistics (ABS)</a>',
+                                                      '<a href="https://data.gov.au/dataset/ds-dga-23fe168c-09a7-42d2-a2f9-fd08fbd0a4ce/details?q=ASGS%202016%20correspondence">data.gov.au</a>',
+                                                      '<a href="https://data.aurin.org.au/dataset/ua-hcmpr-adh-hcmpr-sa1-metro-aria-2014-australia-sa1">Hugo Centre for Migration and Population Research at the University of Adelaide</a>'),
+                                             License = c("Creative Commons Attribution 4.0",
+                                                         "Creative Commons Attribution 4.0",
+                                                         "Creative Commons Attribution 2.5",
+                                                         "Creative Commons Attribution 4.0",
+                                                         "Creative Commons Attribution 2.5",
+                                                         "Creative Commons Attribution 2.5",
+                                                         "Creative Commons Attribution 3.0",
+                                                         "Creative Commons Attribution 3.0",
+                                                         "Creative Commons Attribution 2.5",
+                                                         "Creative Commons Attribution 2.5",
+                                                         "Creative Commons Attribution 2.5",
+                                                         "Creative Commons Attribution-NonCommercial 4.0")))
+    
     #### Establish the Reactive UI components for the 'Select' tab
     
     output$calculate = renderUI({
@@ -254,30 +292,30 @@ server <- function(input, output) {
     output$seifa_1 = renderUI({
         sliderInput(inputId = "seifa_1",
                     label = "SEIFA - Socio-Economic Disadvantage:",
-                    min = select_scaler %>% filter(variable == "relative_socio_economic_disadvantage_index") %>% select(min) %>% pull(),
-                    max = select_scaler %>% filter(variable == "relative_socio_economic_disadvantage_index") %>% select(max) %>% pull(),
-                    value = select_scaler %>% filter(variable == "relative_socio_economic_disadvantage_index") %>% select(mean) %>% pull())
+                    min = select_scaler %>% filter(variable == "seifa_econ_disadvantage") %>% select(min) %>% pull(),
+                    max = select_scaler %>% filter(variable == "seifa_econ_disadvantage") %>% select(max) %>% pull(),
+                    value = select_scaler %>% filter(variable == "seifa_econ_disadvantage") %>% select(mean) %>% pull())
     })
     output$seifa_2 = renderUI({
         sliderInput(inputId = "seifa_2",
                     label = "SEIFA - Socio-Economic Advantage/Disadvantage:",
-                    min = select_scaler %>% filter(variable == "relative_socio_economic_adv_disadv_index") %>% select(min) %>% pull(),
-                    max = select_scaler %>% filter(variable == "relative_socio_economic_adv_disadv_index") %>% select(max) %>% pull(),
-                    value = select_scaler %>% filter(variable == "relative_socio_economic_adv_disadv_index") %>% select(mean) %>% pull())
+                    min = select_scaler %>% filter(variable == "seifa_econ_adv_disadv") %>% select(min) %>% pull(),
+                    max = select_scaler %>% filter(variable == "seifa_econ_adv_disadv") %>% select(max) %>% pull(),
+                    value = select_scaler %>% filter(variable == "seifa_econ_adv_disadv") %>% select(mean) %>% pull())
     })
     output$seifa_3 = renderUI({
         sliderInput(inputId = "seifa_3",
                     label = "SEIFA - Economic Resources:",
-                    min = select_scaler %>% filter(variable == "economic_resources_index") %>% select(min) %>% pull(),
-                    max = select_scaler %>% filter(variable == "economic_resources_index") %>% select(max) %>% pull(),
-                    value = select_scaler %>% filter(variable == "economic_resources_index") %>% select(mean) %>% pull())
+                    min = select_scaler %>% filter(variable == "seifa_econ_resources") %>% select(min) %>% pull(),
+                    max = select_scaler %>% filter(variable == "seifa_econ_resources") %>% select(max) %>% pull(),
+                    value = select_scaler %>% filter(variable == "seifa_econ_resources") %>% select(mean) %>% pull())
     })
     output$seifa_4 = renderUI({
         sliderInput(inputId = "seifa_4",
                     label = "SEIFA - Education & Occupation:",
-                    min = select_scaler %>% filter(variable == "education_and_occupation_index") %>% select(min) %>% pull(),
-                    max = select_scaler %>% filter(variable == "education_and_occupation_index") %>% select(max) %>% pull(),
-                    value = select_scaler %>% filter(variable == "education_and_occupation_index") %>% select(mean) %>% pull())
+                    min = select_scaler %>% filter(variable == "seifa_education_occupation") %>% select(min) %>% pull(),
+                    max = select_scaler %>% filter(variable == "seifa_education_occupation") %>% select(max) %>% pull(),
+                    value = select_scaler %>% filter(variable == "seifa_education_occupation") %>% select(mean) %>% pull())
     })
     output$land_sqm = renderUI({
         sliderInput(inputId = "land_sqm",
@@ -385,12 +423,18 @@ server <- function(input, output) {
         
         suburb <- select_scaled_data
         
-        dist <- as.data.frame(rdist_na(new,suburb[,2:21])) %>%
+        na_count <- select_scaled_data %>%
+            mutate(na_count = rowSums(is.na(select_scaled_data))) %>%
+            select(na_count)
+        
+        dist <- as.data.frame(rdist_na(new,suburb[,5:24])) %>%
             rename(distance = V1) %>%
-            mutate(similarity = 1/(1+(distance/20)))
+            cbind(na_count) %>%
+            mutate(similarity = round(1/(1+(distance/(20))),4)) %>%
+            select(-na_count)
         
         combined <- suburb %>% 
-            select(suburb_name,sa2_name,sa3_name,sa4_name,) %>%
+            select(suburb_name,sa2_name,sa3_name,sa4_name) %>%
             cbind(dist) 
         
         combined
@@ -450,9 +494,15 @@ server <- function(input, output) {
             filter(year == 2019) %>%
             filter(suburb_name != input$suburb)
         
+        na_count <- other_suburbs %>%
+            mutate(na_count = rowSums(is.na(other_suburbs))) %>%
+            select(na_count)
+        
         dist <- as.data.frame(rdist_na(scaled_values[,6:25],other_suburbs[,6:25])) %>%
             rename(distance = V1) %>%
-            mutate(similarity = 1/(1+(distance/20)))
+            cbind(na_count) %>%
+            mutate(similarity = round(1/(1+(distance/(20-na_count))),4)) %>%
+            select(-na_count)
         
         combined <- other_suburbs %>% 
             select(suburb_name,sa2_name,sa3_name,sa4_name) %>%

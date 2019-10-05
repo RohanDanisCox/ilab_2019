@@ -136,30 +136,38 @@
   c1 <- interpolate_extrapolate_lag(census_scores,confirmed_population)
   c2 <- interpolate_extrapolate_lag(census_scores,working_age_proportion) %>% 
     mutate(working_age_proportion = case_when(working_age_proportion > 1 ~ 1,
-                                              TRUE ~ working_age_proportion))
+                                              TRUE ~ working_age_proportion)) %>%
+    mutate(working_age_proportion = round(working_age_proportion,4))
   c3 <- interpolate_extrapolate_lag(census_scores,senior_citizen_proportion) %>%
     mutate(senior_citizen_proportion = case_when(senior_citizen_proportion > 1 ~ 1,
-                                              TRUE ~ senior_citizen_proportion))
+                                              TRUE ~ senior_citizen_proportion)) %>%
+    mutate(senior_citizen_proportion = round(senior_citizen_proportion,4))
   c4 <- interpolate_extrapolate_lag(census_scores,confirmed_journeys) 
   c5 <- interpolate_extrapolate_lag(census_scores,public_transport_proportion) %>%
     mutate(public_transport_proportion = case_when(public_transport_proportion > 1 ~ 1,
-                                          TRUE ~ public_transport_proportion))
+                                          TRUE ~ public_transport_proportion)) %>%
+    mutate(public_transport_proportion = round(public_transport_proportion,4))
   c6 <- interpolate_extrapolate_lag(census_scores,motor_vehicle_proportion)%>%
     mutate(motor_vehicle_proportion = case_when(motor_vehicle_proportion > 1 ~ 1,
-                                          TRUE ~ motor_vehicle_proportion))
+                                          TRUE ~ motor_vehicle_proportion)) %>%
+    mutate(motor_vehicle_proportion = round(motor_vehicle_proportion,4))
   c7 <- interpolate_extrapolate_lag(census_scores,bicycle_walking_proportion)%>%
     mutate(bicycle_walking_proportion = case_when(bicycle_walking_proportion > 1 ~ 1,
-                                          TRUE ~ bicycle_walking_proportion))
+                                          TRUE ~ bicycle_walking_proportion)) %>%
+    mutate(bicycle_walking_proportion = round(bicycle_walking_proportion,4))
   c8 <- interpolate_extrapolate_lag(census_scores,confirmed_dwellings)
   c9 <- interpolate_extrapolate_lag(census_scores,house_and_semi_proportion)%>%
     mutate(house_and_semi_proportion = case_when(house_and_semi_proportion > 1 ~ 1,
-                                          TRUE ~ house_and_semi_proportion))
+                                          TRUE ~ house_and_semi_proportion)) %>%
+    mutate(house_and_semi_proportion = round(house_and_semi_proportion,4))
   c10 <- interpolate_extrapolate_lag(census_scores,unit_proportion)%>%
     mutate(unit_proportion = case_when(unit_proportion > 1 ~ 1,
-                                          TRUE ~ unit_proportion))
+                                          TRUE ~ unit_proportion)) %>%
+    mutate(unit_proportion = round(unit_proportion,4))
   c11 <- interpolate_extrapolate_lag(census_scores,other_proportion)%>%
     mutate(other_proportion = case_when(other_proportion > 1 ~ 1,
-                                          TRUE ~ other_proportion))
+                                          TRUE ~ other_proportion)) %>%
+    mutate(other_proportion = round(other_proportion,4))
   
   census <- c1 %>%
     left_join(c2,by = c("suburb_code", "suburb_name", "year")) %>%
@@ -191,10 +199,18 @@
                                                  TRUE ~ usual_resident_population)) %>%
     select(suburb_code,suburb_name,year,usual_resident_population)
   
-  s2 <- interpolate_extrapolate_lag(seifa_scores, relative_socio_economic_disadvantage_index)
-  s3 <- interpolate_extrapolate_lag(seifa_scores, relative_socio_economic_adv_disadv_index)
-  s4 <- interpolate_extrapolate_lag(seifa_scores, economic_resources_index)
-  s5 <- interpolate_extrapolate_lag(seifa_scores, education_and_occupation_index)
+  s2 <- interpolate_extrapolate_lag(seifa_scores, relative_socio_economic_disadvantage_index) %>%
+    rename(seifa_econ_disadvantage = relative_socio_economic_disadvantage_index) %>%
+    mutate(seifa_econ_disadvantage = round(seifa_econ_disadvantage,1))
+  s3 <- interpolate_extrapolate_lag(seifa_scores, relative_socio_economic_adv_disadv_index) %>%
+    rename(seifa_econ_adv_disadv = relative_socio_economic_adv_disadv_index) %>%
+    mutate(seifa_econ_adv_disadv = round(seifa_econ_adv_disadv,1))
+  s4 <- interpolate_extrapolate_lag(seifa_scores, economic_resources_index) %>%
+    rename(seifa_econ_resources = economic_resources_index) %>%
+    mutate(seifa_econ_resources = round(seifa_econ_resources,1))
+  s5 <- interpolate_extrapolate_lag(seifa_scores, education_and_occupation_index) %>%
+    rename(seifa_education_occupation = education_and_occupation_index) %>%
+    mutate(seifa_education_occupation = round(seifa_education_occupation,1))
   
   seifa <- s1_3 %>%
     left_join(s2,by = c("suburb_code", "suburb_name", "year")) %>%
@@ -205,19 +221,31 @@
 
 # [5] ---- Combine suburbs with the remaining scores ----
   
-  crime <- crime_score
+  crime <- crime_score %>%
+    mutate(log_crime_score = round(log_crime_score,2))
   
   education <- suburbs %>%
     left_join(education_score, by = c("suburb_code", "suburb_name")) %>%
-    select(suburb_code,suburb_name,year,education_score)
+    select(suburb_code,suburb_name,year,education_score) %>%
+    mutate(education_score = round(education_score,2))
   
   green <- suburbs %>%
     left_join(green_score, by = c("suburb_code", "suburb_name")) %>%
-    select(suburb_code,suburb_name,year, green_score, green_score_decile)
+    select(suburb_code,suburb_name,year, green_score, green_score_decile) %>%
+    mutate(green_score = round(green_score,1))
+  
+  land_values_round <- land_values %>%
+    mutate(median_land_value_per_sqm = round(median_land_value_per_sqm,3))
   
   metro_aria <- suburbs %>%
     left_join(metro_aria_year, by = c("suburb_code", "suburb_name", "year")) %>%
-    select(-can_extrapolate)
+    select(-can_extrapolate) %>%
+    mutate(aria_overall = round(aria_overall,2),
+           aria_education = round(aria_education,2),
+           aria_health = round(aria_health,2),
+           aria_shopping = round(aria_shopping,2),
+           aria_public_transport = round(aria_public_transport,2),
+           aria_financial_postal = round(aria_financial_postal,2))
   
   sales_by_year <- suburbs %>%
     left_join(master_sales_by_year_raw, by = c("suburb_code", "suburb_name", "year")) %>%
@@ -237,7 +265,7 @@
   write_rds(green,"data/created/ready_to_combine/green.rds")
   write_rds(census,"data/created/ready_to_combine/census.rds")
   write_rds(seifa,"data/created/ready_to_combine/seifa.rds")
-  write_rds(land_values,"data/created/ready_to_combine/land_values.rds")
+  write_rds(land_values_round,"data/created/ready_to_combine/land_values.rds")
   write_rds(annual_turnover,"data/created/ready_to_combine/annual_turnover.rds")
   write_rds(metro_aria,"data/created/ready_to_combine/metro_aria.rds")
   write_rds(sales_by_year,"data/created/ready_to_combine/sales_by_year.rds")
@@ -272,7 +300,7 @@
   
   # Adding in extra measures based on combinations of existing measures
   master_raw_1 <- master_raw %>%
-    mutate(dwelling_density = confirmed_dwellings/suburb_area_sqkm,
+    mutate(dwelling_density = round(confirmed_dwellings/suburb_area_sqkm,4),
            annual_turnover = case_when(is.na(Apartment_number_of_sales) & 
                                          is.na(House_number_of_sales) ~ NA_real_,
                                        !is.na(Apartment_number_of_sales) & 
@@ -282,7 +310,8 @@
                                        !is.na(Apartment_number_of_sales) & 
                                          !is.na(House_number_of_sales) ~ Apartment_number_of_sales + House_number_of_sales),
            annual_turnover_proportion = annual_turnover / confirmed_dwellings,
-           median_house_price_less_land_value = House_median - Land_median)
+           median_house_price_less_land_value = House_median - Land_median) %>%
+    mutate(annual_turnover = round(annual_turnover,4))
     
   write_rds(master_raw_1,"data/created/master.rds")
   master <- readRDS("data/created/master.rds")
