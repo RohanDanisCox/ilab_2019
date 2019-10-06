@@ -56,7 +56,15 @@
     left_join(suburbs1) %>%
     select(suburb_code,suburb_name,sa3_code,sa3_name,sa4_code,sa4_name,area)
   
-  saveRDS(map, "suburb_investigation_app/data/map.rds")
+  ## Simplify map
+  
+  simple_map <- map %>%
+    st_simplify(preserveTopology = TRUE,dTolerance = 0.0001)
+  
+  object_size(map)
+  object_size(simple_map)
+  
+  saveRDS(simple_map, "suburb_investigation_app/data/map.rds")
   
   # Obtaining the data files 
   
@@ -72,10 +80,12 @@
            sa3_name,
            sa4_name,
            gccsa_name,
+           Violent_Crime = violent_crime,
+           DASG_Crime = dasg_crime,
            Crime = log_crime_score, 
            Education = education_score, 
-           Green_Space = green_score_decile,
-           Census_Population = confirmed_population, 
+           Green_Score = green_score,
+           Green_Decile = green_score_decile,
            Usual_Resident_Population = usual_resident_population,
            Working_Age = working_age_proportion,
            Senior_Citizens = senior_citizen_proportion, 
@@ -110,10 +120,12 @@
   
   nsw_data <- suburb_data %>%
     group_by(year) %>%
-    summarise(Crime = weighted.mean(log_crime_score, usual_resident_population, na.rm = TRUE), 
+    summarise(Violent_Crime = weighted.mean(violent_crime, usual_resident_population, na.rm = TRUE),
+              DASG_Crime = weighted.mean(dasg_crime, usual_resident_population, na.rm = TRUE),
+              Crime = weighted.mean(log_crime_score, usual_resident_population, na.rm = TRUE), 
               Education = weighted.mean(education_score, usual_resident_population, na.rm = TRUE), 
-              Green_Space = weighted.mean(green_score, usual_resident_population, na.rm = TRUE),
-              Census_Population = weighted.mean(confirmed_population, usual_resident_population, na.rm = TRUE), 
+              Green_Score = weighted.mean(green_score, usual_resident_population, na.rm = TRUE),
+              Green_Decile = weighted.mean(green_score_decile, usual_resident_population, na.rm = TRUE),
               Usual_Resident_Population = weighted.mean(usual_resident_population, usual_resident_population, na.rm = TRUE),
               Working_Age = weighted.mean(working_age_proportion, usual_resident_population, na.rm = TRUE),
               Senior_Citizens = weighted.mean(senior_citizen_proportion, usual_resident_population, na.rm = TRUE), 
@@ -148,10 +160,12 @@
   
   sa4_data <- suburb_data %>%
     group_by(sa4_name,year) %>%
-    summarise(Crime = weighted.mean(log_crime_score, usual_resident_population, na.rm = TRUE), 
+    summarise(Violent_Crime = weighted.mean(violent_crime, usual_resident_population, na.rm = TRUE),
+              DASG_Crime = weighted.mean(dasg_crime, usual_resident_population, na.rm = TRUE),
+              Crime = weighted.mean(log_crime_score, usual_resident_population, na.rm = TRUE), 
               Education = weighted.mean(education_score, usual_resident_population, na.rm = TRUE), 
-              Green_Space = weighted.mean(green_score, usual_resident_population, na.rm = TRUE),
-              Census_Population = weighted.mean(confirmed_population, usual_resident_population, na.rm = TRUE), 
+              Green_Score = weighted.mean(green_score, usual_resident_population, na.rm = TRUE),
+              Green_Decile = weighted.mean(green_score_decile, usual_resident_population, na.rm = TRUE),
               Usual_Resident_Population = weighted.mean(usual_resident_population, usual_resident_population, na.rm = TRUE),
               Working_Age = weighted.mean(working_age_proportion, usual_resident_population, na.rm = TRUE),
               Senior_Citizens = weighted.mean(senior_citizen_proportion, usual_resident_population, na.rm = TRUE), 
@@ -186,10 +200,12 @@
   
   sa3_data <- suburb_data %>%
     group_by(sa3_name,year) %>%
-    summarise(Crime = weighted.mean(log_crime_score, usual_resident_population, na.rm = TRUE), 
+    summarise(Violent_Crime = weighted.mean(violent_crime, usual_resident_population, na.rm = TRUE),
+              DASG_Crime = weighted.mean(dasg_crime, usual_resident_population, na.rm = TRUE),
+              Crime = weighted.mean(log_crime_score, usual_resident_population, na.rm = TRUE), 
               Education = weighted.mean(education_score, usual_resident_population, na.rm = TRUE), 
-              Green_Space = weighted.mean(green_score, usual_resident_population, na.rm = TRUE),
-              Census_Population = weighted.mean(confirmed_population, usual_resident_population, na.rm = TRUE), 
+              Green_Score = weighted.mean(green_score, usual_resident_population, na.rm = TRUE),
+              Green_Decile = weighted.mean(green_score_decile, usual_resident_population, na.rm = TRUE),
               Usual_Resident_Population = weighted.mean(usual_resident_population, usual_resident_population, na.rm = TRUE),
               Working_Age = weighted.mean(working_age_proportion, usual_resident_population, na.rm = TRUE),
               Senior_Citizens = weighted.mean(senior_citizen_proportion, usual_resident_population, na.rm = TRUE), 
@@ -312,176 +328,6 @@
   names(suburb_subset)
   # [2b] ---- Testing Objects ----
 
-  leaflet(nsw) %>%
-    addTiles() %>%
-    setView(146.9211,-32.2532, zoom = 5.5)
-  
-  # Set up the colours
-  pal_crime <- colorNumeric(
-    palette = c("white","darkred"),
-    domain = simple_map$log_crime_score)
-  
-  pal_education <- colorNumeric(
-    palette = c("white","darkgreen"),
-    domain = simple_map$education_score)
-  
-  pal_green_space <- colorNumeric(
-    palette = c("white","darkgreen"),
-    domain = simple_map$green_score_decile)
-  
-  pal_working_age <- colorNumeric(
-    palette = c("white","darkblue"),
-    domain = simple_map$working_age_proportion)
-  
-  pal_pubic_transport <- colorNumeric(
-    palette = c("white","darkgreen"),
-    domain = simple_map$public_transport_proportion)
-  
-  pal_house <- colorNumeric(
-    palette = c("white","purple"),
-    domain = simple_map$house_and_semi_proportion)
-  
-  pal_SEIFA_3 <- colorNumeric(
-    palette = c("white","purple"),
-    domain = simple_map$seifa_econ_resources)
-  
-  pal_land <- colorNumeric( ###### Cant use this as there are infinite values
-    palette = c("white","darkgreen"),
-    domain = simple_map$median_land_value_per_sqm)
-  
-  pal_house_price <- colorNumeric(
-    palette = c("white","darkred"),
-    domain = simple_map$house_median_suburb)
-  
-  # Set up leaflet map
-  leaf_map <- leaflet(simple_map) %>%
-    addTiles() %>%
-    setView(146.9211,-32.2532, zoom = 5.5) %>%
-    addPolygons(data = simple_map,
-                weight = 1, 
-                fillColor = ~pal_crime(log_crime_score), 
-                color = "black",
-                opacity = 1,
-                fillOpacity = 0.8,
-                popup = popupTable(simple_map, zcol = c(2:4), feature.id = FALSE),
-                group = "Crime") %>%
-    addPolygons(data = simple_map,
-                weight = 1, 
-                fillColor = ~pal_education(education_score), 
-                color = "black",
-                opacity = 1,
-                fillOpacity = 0.8,
-                popup = popupTable(simple_map, zcol = c(2:4), feature.id = FALSE),
-                group = "Education") %>%
-    addPolygons(data = simple_map,
-               weight = 1, 
-               fillColor = ~pal_green_space(green_score_decile), 
-               color = "black",
-               opacity = 1,
-               fillOpacity = 0.8,
-               popup = popupTable(simple_map, zcol = c(2:4), feature.id = FALSE),
-               group = "Green Space") %>%
-    addPolygons(data = simple_map,
-               weight = 1, 
-               fillColor = ~pal_SEIFA_3(seifa_econ_resources), 
-               color = "black",
-               opacity = 1,
-               fillOpacity = 0.8,
-               popup = popupTable(simple_map, zcol = c(2:4), feature.id = FALSE),
-               group = "SEIFA - Economic Resources") %>%
-    addLayersControl(baseGroups = c("Crime",
-                                    "Education",
-                                    "Green Space",
-                                    "SEIFA - Economic Resources"),
-                     options = layersControlOptions(collapsed = FALSE),
-                     position = "topright" )
-
-  
-  
-  # saved
-  addPolygons(data = simple_map,
-              weight = 1, 
-              fillColor = ~pal_house(house_and_semi_proportion), 
-              color = "black",
-              opacity = 1,
-              fillOpacity = 0.8,
-              popup = popupTable(simple_map, zcol = c(2:4), feature.id = FALSE),
-              group = "Proportion of Houses") %>%
-  addPolygons(data = simple_map,
-              weight = 1, 
-              fillColor = ~pal_house_price(house_median_suburb), 
-              color = "black",
-              opacity = 1,
-              fillOpacity = 0.8,
-              popup = popupTable(simple_map, zcol = c(2:4), feature.id = FALSE),
-              group = "House Prices")
-  
-
-  object_size(leaf_map)
-  
-  saveRDS(leaf_map,"leaflet_investigation_app/data/leaf_map.rds")
-  
-# [2] ---- Mapview Investigation App ----
-  
-# [2a] ---- Obtain Data and Add to Data File ----
-  
-  nsw <- read_sf("data/shapefiles/2016") %>%
-    filter(STE_CODE16 == 1) %>%
-    filter(!SSC_CODE16 %in% c(19494,19797,12387)) %>%
-    mutate(SSC_CODE16 = as.numeric(SSC_CODE16)) %>%
-    select(suburb_code = SSC_CODE16,suburb_name = SSC_NAME16)
-  
-  master <- readRDS("data/created/master.rds")
-  
-  suburb_data <- master %>%
-    filter(!gccsa_code %in% c(19499,19799))
-  
-  suburb_subset <- suburb_data %>%
-    select(suburb_code,suburb_name,year, log_crime_score,education_score) %>%
-    filter(year == 2019)
-  
-  map <- nsw %>%
-    left_join(suburb_subset, by = c("suburb_code", "suburb_name")) %>%
-    select(suburb_code,suburb_name,log_crime_score,education_score)
-  
-  other_map <- readRDS("mapview_investigation_app/data/map.rds")
-  
-  
-  
-  ## Trying to simplify object
-  
-  simple_map <- map %>%
-    st_simplify(preserveTopology = TRUE,dTolerance = 0.0001)
-  
-  object_size(map)
-  object_size(simple_map)
-  
-  saveRDS(simple_map,"mapview_investigation_app/data/simple_map.rds" )
-
-# [2b] ---- Testing Objects ----
-  
-  leaflet(nsw) %>%
-    addTiles() %>%
-    setView(146.9211,-32.2532, zoom = 5.5)
-  
-  leaflet(simple_map) %>%
-    addTiles() %>%
-    setView(146.9211,-32.2532, zoom = 5.5) %>%
-    addPolygons()
-  
-  test <- mapview(simple_map, zcol= c("log_crime_score","education_score"))
-  
-  object_size(test)
-  
-  saveRDS(test,"mapview_investigation_app/data/map_built.rds")
-  
-  mapview(map) + 
-    mapview(zcol= c("log_crime_score","education_score"))
-  
-  mapview(other)
-  
-  saveRDS(map, "mapview_investigation_app/data/other_map.rds")
-  
 # [3] ---- Similarity Investigation App ----  
   # [3a] ---- Obtain Data and Add to Data File ----
   
@@ -565,136 +411,8 @@
   saveRDS(comparison_scaling_data,"similarity_app/data/comparison_scaling_data.rds")
   
   # [2b] ---- Testing Objects ----
-  
-  ## Get the min, max and mean for each variable 
-  
-  check <- simple_data %>% 
-    map_df(~(data.frame(n_distinct = n_distinct(.x),
-                        class = class(.x),
-                        na_count = sum(is.na(.x)))),
-           .id = "variable")
-  
-  check_2 <- simple_data %>%
-    select(7:39) %>%
-    map_df(~(data.frame(min = round(min(.x, na.rm = TRUE),3),
-                        max = round(max(.x, na.rm = TRUE),3),
-                        mean = round(mean(.x,na.rm = TRUE),3),
-                        na_count = sum(is.na(.x)))),
-           .id = "variable")
-  
-  max(simple_data$log_crime_score,na.rm = TRUE)
-
-  check_2 %>% 
-    filter(variable == "suburb_area_sqkm") %>%
-    select(min) %>%
-    pull()
     
-  scaler <- select_scaling_data %>%
-    filter(variable %in% c("suburb_area_sqkm","log_crime_score","education_score","green_score_decile")) ##### NEED TO REMOVE THIS LATER
-  
-  new_values <- tibble(new_values = c(10,3,4,4)) %>%
-    cbind(scaler) %>%
-    mutate(scaled_value = (new_values - mean) / sd) 
-  
-  new <- new_values %>%
-      select(scaled_value) %>% 
-      t()
-    
-  suburb <- select_scaled_data
-    
-    
-    select(1,2,5,6,7) 
-  
-  a <- as.data.frame(rdist::cdist(suburb[,2:5],new)) 
-  
-  b <- as.data.frame(fields::rdist(suburb[,2:5],new)) 
-  
-    
-    library(pdist)
-    
-    rdist.w.na <- function(X,Y)
-    {
-      if (!is.matrix(X)) 
-        X = as.matrix(X)
-      if (!is.matrix(Y)) 
-        Y = as.matrix(Y)
-      distances <- matrix(pdist(X,Y)@dist, ncol=nrow(X), byrow = TRUE)
-      #count NAs
-      na.count <- sapply(1:nrow(X),function(i){rowSums(is.na(Y) | is.na(X[i,]))})
-      #scaling to number of cols
-      distances * sqrt(ncol(X)/(ncol(X) - na.count))
-    }
-
-    c <- as.data.frame(rdist.w.na(new,suburb[,2:5])) 
-    
-    test <- c %>%
-      group_by
-      mutate(divisor = 1/V1) %>%
-      mutate(normalise = (divisor - min(divisor, na.rm = TRUE))/ (max(divisor, na.rm = TRUE) - min(divisor, na.rm = TRUE)))
-    combined <- suburb %>% 
-      select(suburb_name) %>%
-      cbind(test) %>%
-      arrange(desc(normalise)) %>%
-      head(10)
-    
-    final <- simple_map %>%
-      semi_join(combined)
-    
-    centre <- final %>%
-      head(1) %>%
-      st_centroid(geometry)
-    
-    centre$geometry[[1]][1]
-    
-    
-    
-### Trying to find haberfield
-    
-    select_scaler <- readRDS("similarity_app/data/select_scaling_data.rds") %>%
-      filter(variable %in% c("suburb_area_sqkm","log_crime_score","education_score","green_score_decile",
-                             "usual_resident_population","working_age_proportion","senior_citizen_proportion",
-                             "public_transport_proportion","motor_vehicle_proportion","bicycle_walking_proportion",
-                             "house_and_semi_proportion","unit_proportion","dwelling_density",
-                             "seifa_econ_disadvantage","seifa_econ_adv_disadv",
-                             "seifa_econ_resources","seifa_education_occupation",
-                             "median_land_value_per_sqm","house_median_suburb","apartment_median_suburb")) 
-    
-    select_scaled_data <- readRDS("similarity_app/data/select_scaled_data.rds") %>%
-      select(suburb_name,sa2_name,sa3_name,sa4_name,suburb_area_sqkm,log_crime_score,education_score,green_score_decile,
-             usual_resident_population,working_age_proportion,senior_citizen_proportion,
-             public_transport_proportion,motor_vehicle_proportion,bicycle_walking_proportion,
-             house_and_semi_proportion,unit_proportion,dwelling_density,
-             seifa_econ_disadvantage,seifa_econ_adv_disadv,
-             seifa_econ_resources,seifa_education_occupation,
-             median_land_value_per_sqm,house_median_suburb,apartment_median_suburb) 
-    
-    new <- tibble(new_values = c(2.2,8.43,4,2,6300,0.62,0.18,0.28,
-                                 0.64,0.06,0.92,0.04,952,1068,1131,
-                                 1087,1115,2759,1870000,763000)) %>%
-      cbind(select_scaler) %>%
-      mutate(scaled_value = (new_values - mean) / sd) %>%
-      select(scaled_value) %>% 
-      t()
-    
-    suburb <- select_scaled_data
-    
-    na_count <- select_scaled_data %>%
-      mutate(na_count = rowSums(is.na(select_scaled_data))) %>%
-      select(na_count)
-    
-    dist <- as.data.frame(rdist_na(new,suburb[,2:21])) %>%
-      rename(distance = V1) %>%
-      #cbind(na_count) %>%
-      #mutate(similarity = round(1/(1+(distance/(20))),4))
-      mutate(similarity = 1/(1+(distance/(20))))
-    
-    combined <- suburb %>% 
-      select(suburb_name,sa2_name,sa3_name,sa4_name,) %>%
-      cbind(dist) 
-    
-    combined
-    
-    ## Create a tibble 
+# [4] ---- Data Sources ---- 
     
     data_sources <- tibble(`Data Set` = c("Property Sale Information",
                           "Property Land Information",

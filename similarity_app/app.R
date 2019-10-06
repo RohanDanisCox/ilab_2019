@@ -146,7 +146,11 @@ server <- function(input, output) {
 
     ### Build the table to include in the introduction page
     
-    output$intro_table <- renderDataTable(escape = FALSE, data_sources)
+    output$intro_table <- renderDataTable(escape = FALSE, data_sources,
+                                          options = list(lengthChange = FALSE,
+                                                         searching = FALSE,
+                                                         paging = FALSE,
+                                                         info = FALSE))
     
     #### Establish the Reactive UI components for the 'Select' tab
     

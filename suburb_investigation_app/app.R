@@ -21,13 +21,16 @@ library(markdown)
     choices <- readRDS("data/choices.rds")
     
     map <- readRDS("data/map.rds")
+    
+    data_sources <- readRDS("data/data_sources.rds")
 
 # [2] ---- Define UI for application ----
     ui <- navbarPage("Suburb Investigator",
                      tabPanel("Introduction",
                               titlePanel("Welcome to the Suburb Investigator"),
-                              fluidRow(column(12,
-                                              includeMarkdown("data/suburb_investigation_markdown.Rmd")))),
+                              fluidRow(column(10, offset = 1,
+                                              includeMarkdown("data/markdown.Rmd"),
+                                              dataTableOutput("intro_table")))),
                      tabPanel("Investigator",
                               sidebarLayout(
                                   sidebarPanel(
@@ -50,6 +53,11 @@ library(markdown)
     
     server <- function(input, output) {
         
+        output$intro_table <- renderDataTable(escape = FALSE, data_sources,
+                                              options = list(lengthChange = FALSE,
+                                                             searching = FALSE,
+                                                             paging = FALSE,
+                                                             info = FALSE))
         # create reactive input values 
         output$sa4_selector = renderUI({
             selectInput(inputId = "sa4", #name of input

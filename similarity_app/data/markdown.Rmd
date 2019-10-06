@@ -1,18 +1,23 @@
 ---
 title: "Similarity App"
 author: "Rohan Danis-Cox"
-date: "28/09/2019"
+date: "6/10/2019"
 output:
   html_document: default
 ---
 <br>
 This application serves two functions, which can be seen on each of the tabs above.
 
-* The first tab allow users to choose a value for various measures and see similar suburbs are in 2019 to the selected value. 
+* The first tab allow users to choose a value for various measures and see similar suburbs in 2019 to the selected value. 
 * The second tab allows users to select a year and a suburb and see other similar suburbs to the selection.  
 
 Full code can be found here: <https://github.com/RohanDanisCox/ilab_2019/>
 
 My blog describing the activities take is availabel here: <https://16-3327.ca.uts.edu.au/ilab-1-2019/>
+
+This application is one of three I have built for my iLab 2019 project. The other two are:
+
+* A suburb investigation app which allows users to look closely at a given suburb and inspect variables. Find it here: <https://rohandaniscox.shinyapps.io/suburb_investigation_app/>
+* A map-based variable investigation app using Leaflet, which allows users to visualise groupings of variables across all of NSW. Find it here: <https://rohandaniscox.shinyapps.io/leaflet_investigation_app/>
 
 This application makes use of the Leaflet mapping package and combines data from the following sources:
