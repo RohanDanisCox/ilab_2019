@@ -20,7 +20,7 @@
   library(broom)
   library(sf)
   library(RColorBrewer)
-  library(mapview)
+  #library(mapview)
   library(leaflet)
   library(leafpop)
   library(pryr)
@@ -275,7 +275,7 @@
     select(suburb_code,suburb_name,year,sa2_name,sa3_name,sa4_name,suburb_area_sqkm,
            violent_crime,dasg_crime,log_crime_score, # Crime
            education_score, # education
-           green_score_decile, # green space
+           green_score,green_score_decile, # green space
            usual_resident_population,working_age_proportion,senior_citizen_proportion, # Demographics 
            confirmed_journeys,public_transport_proportion,motor_vehicle_proportion, bicycle_walking_proportion, # Transport
            confirmed_dwellings, house_and_semi_proportion, unit_proportion, dwelling_density, # Dwellings
@@ -290,17 +290,26 @@
   map <- nsw %>%
     left_join(suburb_subset, by = c("suburb_code", "suburb_name")) 
   
+  for_names <- map %>%
+    st_drop_geometry()
+  
+  check_na <- map %>%
+    st_drop_geometry() %>%
+    select(7:40) %>%
+    map_df(~(data.frame(na_count = sum(is.na(.x)))),
+           .id = "variable")
+  
   ## Trying to simplify object
   
   simple_map <- map %>%
-    st_simplify(preserveTopology = TRUE,dTolerance = 0.0001)
+    st_simplify(preserveTopology = TRUE,dTolerance = 0.001)
   
   object_size(map)
   object_size(simple_map)
  
   saveRDS(simple_map,"leaflet_investigation_app/data/simple_map.rds")
   
-  
+  names(suburb_subset)
   # [2b] ---- Testing Objects ----
 
   leaflet(nsw) %>%
@@ -407,8 +416,7 @@
               popup = popupTable(simple_map, zcol = c(2:4), feature.id = FALSE),
               group = "House Prices")
   
-  ?popupTable
-    
+
   object_size(leaf_map)
   
   saveRDS(leaf_map,"leaflet_investigation_app/data/leaf_map.rds")
@@ -437,6 +445,8 @@
     select(suburb_code,suburb_name,log_crime_score,education_score)
   
   other_map <- readRDS("mapview_investigation_app/data/map.rds")
+  
+  
   
   ## Trying to simplify object
   
