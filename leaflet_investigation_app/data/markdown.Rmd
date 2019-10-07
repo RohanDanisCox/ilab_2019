@@ -6,7 +6,7 @@ output:
   html_document: default
 ---
 <br>
-This application allows users to view a map of NSW with each measure visualised in colour. To assist with managing memory, measures have been grouped into categories which can be selected using the drop down on the next tab. The map will then generate,<b> but please be patient as this can take up to 1 minute each time the drop down is used.</b>
+This application allows users to view a map of NSW with each measure visualised in colour. To assist with managing memory, measures have been grouped into categories which can be selected using the drop down on the next tab. While this app runs perfectly well locally, to host the app on shinyapps.io I have had to simplify the polygons used for each suburb significantly. I hope this doesn't detract from the experience. Additionally, the load times on shinyapps.io are much slower,<b> so please be patient as it can take up to 1 minute each time the drop down is used.</b>
 
 Full code can be found here: <https://github.com/RohanDanisCox/ilab_2019/>
 

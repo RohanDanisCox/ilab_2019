@@ -306,7 +306,7 @@
   map <- nsw %>%
     left_join(suburb_subset, by = c("suburb_code", "suburb_name")) 
   
-  for_names <- map %>%
+  map_data <- map %>%
     st_drop_geometry()
   
   check_na <- map %>%
@@ -324,6 +324,7 @@
   object_size(simple_map)
  
   saveRDS(simple_map,"leaflet_investigation_app/data/simple_map.rds")
+  saveRDS(map_data,"leaflet_investigation_app/data/map_data.rds")
   
   names(suburb_subset)
   # [2b] ---- Testing Objects ----
