@@ -1,0 +1,9 @@
+name: "ilab_2019"
+output_dir: "../docs"
+navbar:
+  title: "ilab_2019"
+  left:
+    - text: "Home"
+      href: index.html
+    - text: "About"
+      href: about.html
