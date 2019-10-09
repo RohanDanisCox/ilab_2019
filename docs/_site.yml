@@ -1,4 +1,5 @@
-name: "my-website"
+name: ilab_2019
+output_dir: _site
 navbar:
   title: "My Website"
   left:
@@ -6,3 +7,7 @@ navbar:
       href: index.html
     - text: "About"
       href: about.html
+output:
+  html_document:
+    toc: true
+    highlight: textmate
