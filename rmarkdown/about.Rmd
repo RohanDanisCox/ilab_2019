@@ -1,5 +1,23 @@
 ---
 title: "About This Website"
+output:
+  html_document:
+    toc: true
+    toc_float: true
 ---
 
-More about this website.
+There are a lot of ways to get sophisticated here, and we're only covering a few possibilites here. See [RStudio's R Markdown lessons](http://rmarkdown.rstudio.com/lesson-1.html) for other R Markdown capabilities. Plus, R Markdown can render styling from Cascading Style Sheets (CSS) and Hyper Text Markup Language (HTML), which is what non-R Markdown websites use.  
+
+So, Googling what you want to do and trying it in your R Markdown files is a good way to learn. Disclaimer: that's how I've learned the following, so there are most definitely better and more elegant ways to do this. But here are some ideas of what you may want to do with your website. 
+
+----
+
+## R Markdown options 
+
+These are options that you can do from the Front Matter. 
+
+<br>
+
+### Table of Contents
+
+Note that on this page:
