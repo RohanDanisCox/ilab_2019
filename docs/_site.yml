@@ -1,5 +1,5 @@
-name: ilab_2019
-output_dir: _site
+name: "ilab_2019"
+output_dir: "."
 navbar:
   title: "My Website"
   left:
