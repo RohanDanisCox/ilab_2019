@@ -42,7 +42,6 @@
   
   # Save off the data
   
-  saveRDS(data,"rmarkdown/rmarkdown_data.rds")
   
 # [2] ---- Start working with the data ----
 
@@ -88,7 +87,10 @@
                       slice(1) %>%
                       filter(index > 800),
                     aes(label = suburb_name)) + 
-    expand_limits(x = max(index_2$year) + 3)
+    expand_limits(x = max(index_2$year) + 2) +
+    ggtitle("Everywhere Makes Money") +
+    theme_minimal()+
+    theme(legend.position="bottom")
   
   # Graph of just top 10 suburbs in greater sydney
   ggplot(data = index_2 %>% 
@@ -170,6 +172,8 @@
               aes(x = year + 0.2, label = suburb_name, hjust = 0)) + 
     expand_limits(x = max(index_4$year) + 3)
   
+  saveRDS(index_4,"rmarkdown/rmarkdown_data.rds")
+  
 # [3] ---- A bit of modelling ---- 
   
   ## Add back nsw_control_index to data 
@@ -204,4 +208,9 @@
                                      x = random_forest_data[,2:18])
     
     ?randomForest
+  
+  
+  # to package up
+  
+  rmarkdown::render_site(input = "rmarkdown")
   
