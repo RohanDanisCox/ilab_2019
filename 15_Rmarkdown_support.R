@@ -42,7 +42,7 @@
   
   # Save off the data
   
-  saveRDS(data,"rmarkdown_data.rds")
+  saveRDS(data,"rmarkdown/rmarkdown_data.rds")
   
 # [2] ---- Start working with the data ----
 

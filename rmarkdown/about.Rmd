@@ -5,6 +5,18 @@ output:
     toc: true
     toc_float: true
 ---
+## This here is a test run
+I am going to talk about something here
+
+```{r echo = FALSE,message =FALSE, warning=FALSE}
+library(ggplot2)
+library(dplyr)
+
+data <- readRDS("rmarkdown_data.rds")
+
+ggplot(data,aes(x = year,y= house_median, group = suburb_name)) +
+  geom_line()
+```
 
 There are a lot of ways to get sophisticated here, and we're only covering a few possibilites here. See [RStudio's R Markdown lessons](http://rmarkdown.rstudio.com/lesson-1.html) for other R Markdown capabilities. Plus, R Markdown can render styling from Cascading Style Sheets (CSS) and Hyper Text Markup Language (HTML), which is what non-R Markdown websites use.  
 
