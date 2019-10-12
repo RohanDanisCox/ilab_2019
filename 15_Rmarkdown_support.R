@@ -116,7 +116,6 @@
   
   # Do the same for units
   
-  
   master_unit <- readRDS("data/created/master.rds") %>%
     filter(year >= 2001)
   
@@ -288,7 +287,6 @@
     guides(colour = guide_legend(override.aes = list(alpha = 1)))
   
   # Where are they?
-  
   ggplot(rest) +
     geom_sf() +
     geom_sf(data = rest %>% filter(sa4_name %in% c("Capital Region",
@@ -391,7 +389,100 @@
           axis.title.y=element_blank()) +
     guides(fill=guide_legend(nrow=2,byrow=TRUE))
   
-# [4][1] ---- Apartments ----
+# [4][1] ---- Apartments Growth ----
+
+  ggplot(units,aes(x = year, y = index, group = suburb_name)) + 
+    geom_line(alpha = 0.1) +
+    ggtitle("Apartments - A Story of Growth") +
+    theme_minimal() +
+    theme(plot.title = element_text(hjust=0.5)) +
+    geom_hline(yintercept=100, linetype="dashed", color = "red") + 
+    scale_y_continuous(breaks = c(100,500,1000), limits = c(0,1500)) + 
+    labs(x = "Year", y = "Price Index from year 2001") +
+    annotate("rect", xmin=2001.1, xmax=2001.9, ymin=0, ymax=Inf, alpha=0.1, fill="green") + 
+    annotate("rect", xmin=2008.7, xmax=2009.3, ymin=0, ymax=Inf, alpha=0.1, fill="green") + 
+    annotate("rect", xmin=2011.9, xmax=2019, ymin=0, ymax=Inf, alpha=0.1, fill="green") +
+    annotate("rect", xmin=2002.4, xmax=2008.3, ymin=0, ymax=Inf, alpha=0.1, fill="red") + 
+    annotate("rect", xmin=2009.8, xmax=2010.9, ymin=0, ymax=Inf, alpha=0.1, fill="red")
+  
+  
+# [4][2] ---- Greater Sydney ---- 
+  
+  top_syd_unit <- units %>%
+    filter(year == 2019) %>%
+    filter(gccsa_name == "Greater Sydney") %>% 
+    arrange(desc(top)) %>%
+    head(10)
+  
+  top_syd_points_unit <- centroid %>%
+    semi_join(top_syd_unit) %>%
+    mutate(x = st_coordinates(geometry)[,1],
+           y = st_coordinates(geometry)[,2]) 
+  
+  ggplot(units %>% 
+           filter(gccsa_name == "Greater Sydney") %>% 
+           arrange(desc(top)) %>%
+           head(190),
+         aes(x = year, y = index, group = suburb_name, colour = sa4_name)) + 
+    geom_line() +
+    geom_text_repel(data = units %>% 
+                      filter(gccsa_name == "Greater Sydney") %>% 
+                      arrange(desc(top)) %>%
+                      head(190) %>%
+                      group_by(suburb_name) %>%
+                      arrange(desc(year)) %>%
+                      slice(1),
+                    aes(x = year + 0.2, label = suburb_name), 
+                    direction = "y",hjust = -0.5, size= 3, segment.alpha = 0.4) + 
+    scale_x_continuous(expand = c(0.1,0.1,0.3,0)) +
+    scale_y_continuous(breaks = c(100,500,1000)) +
+    ggtitle("Top 10 - Greater Sydney") +
+    labs(x = "Year", y = "Price Index from year 2001", colour = "SA4") +
+    theme_minimal()+
+    theme(plot.title = element_text(hjust=0.5)) +
+    theme(legend.position="bottom") + 
+    guides(colour = guide_legend(override.aes = list(alpha = 1),
+                                 nrow=2,byrow=TRUE))
+  
+  ggplot(sydney) +
+    geom_sf() +
+    geom_sf(data = sydney %>% filter(sa4_name %in% c("Central Coast",
+                                                     "Sydney - City and Inner South",
+                                                     "Sydney - Outer South West",
+                                                     "Sydney - Outer West and Blue Mountains",
+                                                     "Sydney - Inner West",
+                                                     "Sydney - South West")),
+            mapping = aes(fill = sa4_name)) +
+    geom_point(data = top_syd_points_unit,mapping = aes(x,y), colour = "red") +
+    geom_label_repel(data = top_syd_points_unit,
+                     mapping = aes(x,y,label = suburb_name),
+                     direction = "both", size= 3, segment.alpha = 0.4) +
+    scale_x_continuous(expand = c(0.1,0.1,0.3,0)) +
+    ggtitle("Top 10 Suburbs - Apartments - Greater Sydney") +
+    labs(fill = "SA4") +
+    theme_minimal()+
+    theme(plot.title = element_text(hjust=0.5)) +
+    theme(legend.position="bottom",
+          axis.title.x=element_blank(),
+          axis.title.y=element_blank()) +
+    guides(fill=guide_legend(nrow=2,byrow=TRUE))
+  
+  unit_growth_by_sa4 <- units %>%
+    filter(year == 2019) %>%
+    group_by(sa4_name,gccsa_name) %>%
+    summarise(average = mean(index)) 
+  
+  unit_sydney_growth <- sydney %>%
+    left_join(unit_growth_by_sa4)
+  
+  ggplot(unit_sydney_growth) +
+    geom_sf(mapping = aes(fill = average)) +
+    scale_fill_continuous(type = "viridis",limits = c(200,350)) +
+    ggtitle("Average Price Index - Greater Sydney") +
+    labs(fill = "Average Price Index in 2019") +
+    theme_minimal()+
+    theme(plot.title = element_text(hjust=0.5)) +
+    theme(legend.position="bottom", legend.key.width = unit(0.7,"cm"))
   
 #  [3][6] ---- Getting Rich off the Lockout ----
   
@@ -438,7 +529,22 @@
   
   ### Try with units
   
-  ggplot(units %>% 
+  table(lockout$sa3_name)
+  
+  lockout <- units %>%
+    filter(sa3_name %in% c("Sydney Inner City")) %>%
+    mutate(lockout_flag = case_when(suburb_name %in% c("Pyrmont",
+                                                       "Ultimo",
+                                                       "Chippendale",
+                                                       "Haymarket",
+                                                       "Surry Hills",
+                                                       "Elizabeth Bay",
+                                                       "Rushcutters Bay",
+                                                       "Darlinghurst",
+                                                       "Woolloomooloo") ~ "Lockout",
+                                    TRUE ~ "No Lockout"))
+  
+  ggplot(units %>%
            filter(suburb_name %in% c("Pyrmont",
                                      "Ultimo",
                                      "Chippendale",
@@ -447,10 +553,10 @@
                                      "Elizabeth Bay",
                                      "Rushcutters Bay",
                                      "Darlinghurst",
-                                     "Wooloomooloo")),
+                                     "Woolloomooloo")), 
          aes(x = year, y = index, group = suburb_name)) + 
     geom_line() +
-    geom_text_repel(data = units %>% 
+    geom_text_repel(data = units %>%
                       filter(suburb_name %in% c("Pyrmont",
                                                 "Ultimo",
                                                 "Chippendale",
@@ -459,7 +565,7 @@
                                                 "Elizabeth Bay",
                                                 "Rushcutters Bay",
                                                 "Darlinghurst",
-                                                "Woolloomoolloo")) %>%
+                                                "Woolloomooloo")) %>%
                       group_by(suburb_name) %>%
                       arrange(desc(year)) %>%
                       slice(1),
@@ -468,13 +574,41 @@
     geom_vline(xintercept = 2014.15, linetype="dashed", color = "red") +
     scale_x_continuous(expand = c(0.1,0.1,0.3,0)) +
     scale_y_continuous(breaks = c(100,500,1000)) +
-    ggtitle("Top 10 - Greater Sydney") +
-    labs(x = "Year", y = "Price Index from year 2000", colour = "SA4") +
+    ggtitle("Lockout Impact") +
+    labs(x = "Year", y = "Price Index from year 2001", colour = "SA4") +
     theme_minimal()+
     theme(plot.title = element_text(hjust=0.5)) +
     theme(legend.position="bottom") + 
     guides(colour = guide_legend(override.aes = list(alpha = 1),
                                  nrow=2,byrow=TRUE))
+  
+  
+  lockout_agg <- units %>%
+    filter(sa4_name %in% c("Sydney - Inner West",
+                           "Sydney - City and Inner South",
+                           "Sydney - Eastern Suburbs")) %>%
+    group_by(sa3_name, year) %>%
+    summarise(average_index = mean(index))
+    
+  
+  ggplot(lockout_agg, aes(x = year, y = average_index, group = sa3_name, colour = sa3_name)) + 
+    geom_line() +
+    geom_text_repel(data = lockout_agg %>% 
+                      group_by(sa3_name) %>%
+                      arrange(desc(year)) %>%
+                      slice(1),
+                    aes(x = year + 0.2, label = sa3_name), 
+                    direction = "y",hjust = -0.5, size= 3, segment.alpha = 0.4) + 
+    geom_vline(xintercept = 2014.15, linetype="dashed", color = "red") +
+    scale_x_continuous(expand = c(0.1,0.1,0.3,0)) +
+    scale_y_continuous(breaks = c(100,200,300,400,500)) +
+    ggtitle("Top 10 - Greater Sydney") +
+    labs(x = "Year", y = "Price Index from year 2001", colour = "SA4") +
+    theme_minimal()+
+    theme(plot.title = element_text(hjust=0.5)) +
+    theme(legend.position = "none")
+
+  
   
   
 # [4] ---- Trash ----
@@ -569,8 +703,6 @@
     expand_limits(x = max(index_4$year) + 3)
   
   saveRDS(index_4,"rmarkdown/rmarkdown_data.rds")
-  
-  
   
   
 # [4] ---- A bit of modelling ---- 
