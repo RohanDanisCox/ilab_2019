@@ -59,8 +59,14 @@
     summarise(geometry = st_union(geometry)) %>%
     st_simplify(preserveTopology = TRUE,dTolerance = 0.001)
   
+  # get the center of each suburb
+  
+  centroid <- map %>%
+    mutate(geometry = st_centroid(geometry))
+  
   saveRDS(sydney,"rmarkdown/map_sydney.rds")
   saveRDS(rest,"rmarkdown/map_rest.rds")
+  saveRDS(centroid,"rmarkdown/centroids.rds")
   
 # [2] ---- Build out the dataset ----
 
@@ -108,6 +114,67 @@
   
   data <- index_4
   
+  # Do the same for units
+  
+  
+  master_unit <- readRDS("data/created/master.rds") %>%
+    filter(year >= 2001)
+  
+  data_raw_unit <- master_unit %>%
+    select(suburb_code,suburb_name,year,sa2_name,sa3_name,sa4_name,gccsa_name,suburb_area_sqkm,
+           violent_crime,dasg_crime,log_crime_score, # Crime
+           education_score, # education
+           green_score_decile, # green space
+           usual_resident_population,working_age_proportion,senior_citizen_proportion, # Demographics 
+           confirmed_journeys,public_transport_proportion,motor_vehicle_proportion, bicycle_walking_proportion, # Transport
+           confirmed_dwellings, house_and_semi_proportion, unit_proportion, dwelling_density, # Dwellings
+           seifa_econ_disadvantage, seifa_econ_adv_disadv, # SEIFA
+           seifa_econ_resources, seifa_education_occupation, # SEIFA
+           median_land_value,median_land_value_per_sqm, # Land Values
+           aria_overall, aria_education, aria_health, aria_shopping, aria_public_transport, aria_financial_postal, # ARIA
+           house_median = house_median_suburb, unit_median = apartment_median_suburb, land_median_suburb, annual_turnover) # Property Prices
+  
+  units_1 <- data_raw_unit %>%
+    select(suburb_name,sa2_name,sa3_name,sa4_name,gccsa_name,year,unit_median) %>%
+    group_by(suburb_name,suburb_name,sa2_name,sa3_name,sa4_name) %>%
+    mutate(base_price = first(unit_median)) %>%
+    ungroup() %>%
+    filter(!is.na(base_price))
+  
+  unit_check <- units_1 %>%
+    filter(is.na(unit_median)) %>%
+    group_by(suburb_name,suburb_name,sa2_name,sa3_name,sa4_name,gccsa_name) %>%
+    summarise(n = n()) %>%
+    ungroup() #%>%
+  #filter(n > 1)
+  
+  units_2 <- units_1 %>%
+    anti_join(unit_check, by = c("suburb_name", "sa2_name", "sa3_name", "sa4_name","gccsa_name"))
+  
+  units_3 <- units_2 %>%
+    mutate(index = (unit_median / base_price) * 100) %>%
+    group_by(suburb_name,suburb_name,sa2_name,sa3_name,sa4_name,gccsa_name) %>%
+    mutate(top = last(index))
+  
+  units_4 <- units_3 %>%
+    group_by(year) %>%
+    mutate(mean_nsw = mean(unit_median)) %>%
+    ungroup() %>%
+    group_by(suburb_name,suburb_name,sa2_name,sa3_name,sa4_name,gccsa_name) %>%
+    mutate(base_nsw = first(mean_nsw)) %>% 
+    ungroup() %>%
+    mutate(nsw_control_index = (unit_median / base_nsw) *100)
+  
+  units_5 <- units_4 %>%
+    mutate(control = unit_median / mean_nsw) %>%
+    group_by(suburb_name,suburb_name,sa2_name,sa3_name,sa4_name,gccsa_name) %>%
+    mutate(base_control = first(control)) %>% 
+    ungroup() %>%
+    mutate(control_index = (control / base_control) *100)
+  
+  units <- units_5
+  
+  saveRDS(units,"rmarkdown/units.rds")
   
 # [3] ---- Develop Visuals ----
   
@@ -183,7 +250,18 @@
     theme(plot.title = element_text(hjust=0.5)) +
     theme(legend.position="bottom", legend.key.width = unit(0.7,"cm"))
   
-  # [3][4] ---- Which Suburbs Grew the Most? ----
+# [3][4] ---- Which Regional Suburbs Grew the Most? ----
+  
+  top_rest <- data %>%
+    filter(year == 2019) %>%
+    filter(gccsa_name == "Rest of NSW") %>% 
+    arrange(desc(top)) %>%
+    head(10)
+  
+  top_rest_points <- centroid %>%
+    semi_join(top_rest) %>%
+    mutate(x = st_coordinates(geometry)[,1],
+           y = st_coordinates(geometry)[,2]) 
   
   ggplot(data %>% 
            filter(gccsa_name == "Rest of NSW") %>% 
@@ -220,12 +298,186 @@
                                                    "Newcastle and Lake Macquarie",
                                                    "Riverina")),
             mapping = aes(fill = sa4_name)) +
-    ggtitle("Top 10 - Rest of NSW (Locations)") +
+    geom_point(data = top_rest_points,mapping = aes(x,y), colour = "red") +
+    geom_label_repel(data = top_rest_points,mapping = aes(x,y,label = suburb_name)) +
+    ggtitle("Top 10 - Rest of NSW") +
+    labs(fill = "SA4") +
+    theme_minimal() +
+    theme(plot.title = element_text(hjust=0.5)) +
+    theme(legend.position="bottom",
+          axis.title.x=element_blank(),
+          axis.title.y=element_blank())
+  
+# [3][5] ---- Which Sydney Suburbs Grew the Most? ----
+  
+  top_syd <- data %>%
+    filter(year == 2019) %>%
+    filter(gccsa_name == "Greater Sydney") %>% 
+    arrange(desc(top)) %>%
+    head(10)
+  
+  top_syd_points <- centroid %>%
+    semi_join(top_syd) %>%
+    mutate(x = st_coordinates(geometry)[,1],
+           y = st_coordinates(geometry)[,2]) 
+  
+  ggplot(data %>% 
+           filter(gccsa_name == "Greater Sydney") %>% 
+           arrange(desc(top)) %>%
+           head(200),
+         aes(x = year, y = index, group = suburb_name, colour = sa4_name)) + 
+    geom_line() +
+    geom_text_repel(data = data %>% 
+                      filter(gccsa_name == "Greater Sydney") %>% 
+                      arrange(desc(top)) %>%
+                      head(200) %>%
+                      group_by(suburb_name) %>%
+                      arrange(desc(year)) %>%
+                      slice(1),
+                    aes(x = year + 0.2, label = suburb_name), 
+                    direction = "y",hjust = -0.5, size= 3, segment.alpha = 0.4) + 
+    scale_x_continuous(expand = c(0.1,0.1,0.3,0)) +
+    scale_y_continuous(breaks = c(100,500,1000)) +
+    ggtitle("Top 10 - Greater Sydney") +
+    labs(x = "Year", y = "Price Index from year 2000", colour = "SA4") +
+    theme_minimal()+
+    theme(plot.title = element_text(hjust=0.5)) +
+    theme(legend.position="bottom") + 
+    guides(colour = guide_legend(override.aes = list(alpha = 1),
+                                 nrow=2,byrow=TRUE))
+  
+  ggplot(sydney) +
+    geom_sf() +
+    geom_sf(data = sydney %>% filter(sa4_name %in% c("Central Coast",
+                                                   "Sydney - Eastern Suburbs",
+                                                   "Sydney - North Sydney and Hornsby",
+                                                   "Sydney - Northern Beaches")),
+            mapping = aes(fill = sa4_name)) +
+    geom_point(data = top_syd_points,mapping = aes(x,y), colour = "red") +
+    geom_label_repel(data = top_syd_points,
+                    mapping = aes(x,y,label = suburb_name),
+                    direction = "both", size= 3, segment.alpha = 0.4) +
+    scale_x_continuous(expand = c(0.1,0.1,0.3,0)) +
+    ggtitle("Top 10 - Greater Sydney") +
     labs(fill = "SA4") +
     theme_minimal()+
     theme(plot.title = element_text(hjust=0.5)) +
-    theme(legend.position="bottom")
+    theme(legend.position="bottom",
+          axis.title.x=element_blank(),
+          axis.title.y=element_blank()) +
+    guides(fill=guide_legend(nrow=2,byrow=TRUE))
   
+  ## Zoom in further
+  
+  ggplot(sydney) +
+    geom_sf() +
+    geom_sf(data = sydney %>% filter(sa4_name %in% c("Central Coast",
+                                                     "Sydney - Eastern Suburbs",
+                                                     "Sydney - North Sydney and Hornsby",
+                                                     "Sydney - Northern Beaches")),
+            mapping = aes(fill = sa4_name)) +
+    coord_sf(xlim = c(151, 151.4), ylim = c(-34, -33.7), expand = FALSE) +
+    geom_point(data = top_syd_points,mapping = aes(x,y), colour = "red") +
+    geom_label_repel(data = top_syd_points,
+                     mapping = aes(x,y,label = suburb_name),
+                     direction = "both", size= 3, segment.alpha = 0.4) +
+    scale_x_continuous(expand = c(0.1,0.1,0.3,0)) +
+    ggtitle("Top 10 - Greater Sydney") +
+    labs(fill = "SA4") +
+    theme_minimal()+
+    theme(plot.title = element_text(hjust=0.5)) +
+    theme(legend.position="bottom",
+          axis.title.x=element_blank(),
+          axis.title.y=element_blank()) +
+    guides(fill=guide_legend(nrow=2,byrow=TRUE))
+  
+# [4][1] ---- Apartments ----
+  
+#  [3][6] ---- Getting Rich off the Lockout ----
+  
+  #Pyrmont (including the Star City Casino) , 
+  #Ultimo, Chippendale, Haymarket, Surry Hills, Elizabeth Bay, Rushcutters Bay and Darlinghurst
+  
+  ggplot(data %>% 
+           filter(suburb_name %in% c("Pyrmont",
+                                     "Ultimo",
+                                     "Chippendale",
+                                     "Haymarket",
+                                     "Surry Hills",
+                                     "Elizabeth Bay",
+                                     "Rushcutters Bay",
+                                     "Darlinghurst",
+                                     "Wooloomooloo")),
+         aes(x = year, y = index, group = suburb_name, colour = sa4_name)) + 
+    geom_line() +
+    geom_text_repel(data = data %>% 
+                      filter(suburb_name %in% c("Pyrmont",
+                                                "Ultimo",
+                                                "Chippendale",
+                                                "Haymarket",
+                                                "Surry Hills",
+                                                "Elizabeth Bay",
+                                                "Rushcutters Bay",
+                                                "Darlinghurst",
+                                                "Wooloomooloo")) %>%
+                      group_by(suburb_name) %>%
+                      arrange(desc(year)) %>%
+                      slice(1),
+                    aes(x = year + 0.2, label = suburb_name), 
+                    direction = "y",hjust = -0.5, size= 3, segment.alpha = 0.4) + 
+    scale_x_continuous(expand = c(0.1,0.1,0.3,0)) +
+    scale_y_continuous(breaks = c(100,500,1000)) +
+    ggtitle("Top 10 - Greater Sydney") +
+    labs(x = "Year", y = "Price Index from year 2000", colour = "SA4") +
+    theme_minimal()+
+    theme(plot.title = element_text(hjust=0.5)) +
+    theme(legend.position="bottom") + 
+    guides(colour = guide_legend(override.aes = list(alpha = 1),
+                                 nrow=2,byrow=TRUE))
+  
+  
+  ### Try with units
+  
+  ggplot(units %>% 
+           filter(suburb_name %in% c("Pyrmont",
+                                     "Ultimo",
+                                     "Chippendale",
+                                     "Haymarket",
+                                     "Surry Hills",
+                                     "Elizabeth Bay",
+                                     "Rushcutters Bay",
+                                     "Darlinghurst",
+                                     "Wooloomooloo")),
+         aes(x = year, y = index, group = suburb_name)) + 
+    geom_line() +
+    geom_text_repel(data = units %>% 
+                      filter(suburb_name %in% c("Pyrmont",
+                                                "Ultimo",
+                                                "Chippendale",
+                                                "Haymarket",
+                                                "Surry Hills",
+                                                "Elizabeth Bay",
+                                                "Rushcutters Bay",
+                                                "Darlinghurst",
+                                                "Woolloomoolloo")) %>%
+                      group_by(suburb_name) %>%
+                      arrange(desc(year)) %>%
+                      slice(1),
+                    aes(x = year + 0.2, label = suburb_name), 
+                    direction = "y",hjust = -0.5, size= 3, segment.alpha = 0.4) + 
+    geom_vline(xintercept = 2014.15, linetype="dashed", color = "red") +
+    scale_x_continuous(expand = c(0.1,0.1,0.3,0)) +
+    scale_y_continuous(breaks = c(100,500,1000)) +
+    ggtitle("Top 10 - Greater Sydney") +
+    labs(x = "Year", y = "Price Index from year 2000", colour = "SA4") +
+    theme_minimal()+
+    theme(plot.title = element_text(hjust=0.5)) +
+    theme(legend.position="bottom") + 
+    guides(colour = guide_legend(override.aes = list(alpha = 1),
+                                 nrow=2,byrow=TRUE))
+  
+  
+# [4] ---- Trash ----
   
   ggplot(data,aes(x = year, y = index, group = suburb_name, colour = gccsa_name)) + 
     geom_line(alpha = 0.2) +
