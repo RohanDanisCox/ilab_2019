@@ -39,12 +39,13 @@
 
   # Obtain map file
   nsw <- read_sf("data/shapefiles/2016") %>%
-    filter(STE_CODE16 == 1)
+    filter(STE_CODE16 == 1) %>%
+    filter(!SSC_CODE16 %in% c(19494,19797,12387))
   
   suburbs <- readRDS("data/created/suburbs.rds")
   
   suburbs1 <- suburbs %>%
-    select(suburb_code,suburb_name,sa3_code,sa3_name,sa4_code,sa4_name)
+    select(suburb_code,suburb_name,sa3_code,sa3_name,sa4_code,sa4_name,gccsa_name)
   
   nsw1 <- nsw %>% 
     mutate(suburb_code = as.numeric(SSC_CODE16),
@@ -54,7 +55,9 @@
   
   map <- nsw1 %>%
     left_join(suburbs1) %>%
-    select(suburb_code,suburb_name,sa3_code,sa3_name,sa4_code,sa4_name,area)
+    select(suburb_code,suburb_name,sa3_code,sa3_name,sa4_code,sa4_name,gccsa_name) 
+  
+  saveRDS(map,"data/created/maps.rds")
   
   ## Simplify map
   
