@@ -619,6 +619,82 @@ div.tocify {
 <p><img src="case_study_files/figure-html/unnamed-chunk-15-1.png" width="100%" /></p>
 </div>
 </div>
+<div id="understanding-variable-importance" class="section level2">
+<h2>Understanding Variable Importance</h2>
+<p>As shown on the introduction page, there are a number of data sets which have been combined with the core property sale data to try to understand suburb characteristics. Importantly, these data sets run on time scales which may not align with the property sales which run from 1990 to 2019 (although units were only properly captured from 2001).</p>
+<p>The following table summarises the data sets timeframe and provides an explanation for how they were transformed.</p>
+<table>
+<thead>
+<tr class="header">
+<th align="left">Data Set</th>
+<th align="left">Timeframe</th>
+<th align="left">Explanation</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Property Sale Information</td>
+<td align="left">1990 - 2019</td>
+<td align="left">Yearly values were calculated using the average of a rolling 12-month window (calculated quarterly from the previous 12 months of data)</td>
+</tr>
+<tr class="even">
+<td align="left">Property Land Information</td>
+<td align="left">2012 - 2018</td>
+<td align="left">Values updated annually by NSW Valuer General - Extrapolated from 2018 to 2019</td>
+</tr>
+<tr class="odd">
+<td align="left">Recorded Crime by Offence</td>
+<td align="left">1995 - 2018</td>
+<td align="left">Yearly values were aggregated from monthly totals - Extrapolated from 2018 to 2019</td>
+</tr>
+<tr class="even">
+<td align="left">SEIFA</td>
+<td align="left">2001,2006,2011,2016</td>
+<td align="left">Interpolated values between 2001 and 2016 and then extrapolated from 2016 - 2019</td>
+</tr>
+<tr class="odd">
+<td align="left">Census</td>
+<td align="left">2006,2011,2016</td>
+<td align="left">Interpolated values between 2006 and 2016 and then extrapolated from 2016 - 2019</td>
+</tr>
+<tr class="even">
+<td align="left">NSW Government &amp; Non-Government Schools</td>
+<td align="left">2016</td>
+<td align="left">Government &amp; Non-Government schools were combined with Government schools to build a proxy of education, but this comes from a single year reference point. The calculated value was allocated to all years</td>
+</tr>
+<tr class="odd">
+<td align="left">Mesh Blocks</td>
+<td align="left">2016</td>
+<td align="left">Meshblocks are relevant for the Green Space calculation, but provide only a single year. This value was allocated to all years</td>
+</tr>
+<tr class="even">
+<td align="left">Metro ARIA</td>
+<td align="left">2014</td>
+<td align="left">Only a single year is available and so this value was allocated to all years going forward</td>
+</tr>
+</tbody>
+</table>
+<p>While some variables I’ve included would suggest powerful predictive capabilities, such as the ARIA scores for access to services or my proxy for Green Space, in a modelling context they are not going to be useful as they have a single value which does not change over time, and was obtained much later than some of the data.</p>
+<p>On the other hand, the SEIFA indexes coming out of the ABS and the other Census measures probably can be used to try to understand the impact they have on house or unit prices. Given they are calculated at 5 year windows (withing a changing suburb environment) they are far from perfect, but given the fairly logical transformations I have completed they have some modeling usefulness.</p>
+<p>One further transformation I have completed is to try and control for the general growth in values over time. Leaving this in basically shows years as the most relevant variable by far and this is simply because of the very strong growth trend which has been seen over the past 20 years. By first taking the suburb median and then dividing by the NSW median, I am able to control for the general upward movement in the state to a certain degree.</p>
+<div id="from-2001" class="section level3">
+<h3>From 2001</h3>
+<p>The following graph shows the variable importance scores coming from a random forest generated to model the NSW growth adjusted index from 2001 - 2019, using only the variables available for that period.</p>
+<p><img src="case_study_files/figure-html/unnamed-chunk-17-1.png" width="100%" /></p>
+<p>This shows XXXXXX</p>
+<p><img src="case_study_files/figure-html/unnamed-chunk-18-1.png" width="100%" /></p>
+</div>
+<div id="from-2006" class="section level3">
+<h3>From 2006</h3>
+<p>Blaha</p>
+<p><img src="case_study_files/figure-html/unnamed-chunk-19-1.png" width="100%" /></p>
+<p>This shows XXXXXX</p>
+<p><img src="case_study_files/figure-html/unnamed-chunk-20-1.png" width="100%" /></p>
+</div>
+<div id="how-do-these-variables-help-explain-prices" class="section level3">
+<h3>How do these variables help explain prices??</h3>
+</div>
+</div>
 
 
 

@@ -17,6 +17,8 @@ units <- readRDS("units.rds")
 sydney <- readRDS("map_sydney.rds")
 rest <- readRDS("map_rest.rds")
 centroid <- readRDS("centroids.rds")
+data_set_year <- readRDS("data_set_year.rds")
+data_set_allocation <- readRDS("data_set_allocation.rds")
 
 growth_by_sa4 <- data %>%
     filter(year == 2019) %>%
@@ -468,3 +470,91 @@ The below graph dispels that thought however as it shows nothing special at all 
     theme(plot.title = element_text(hjust=0.5)) +
     theme(legend.position = "none")
 ```
+
+## Understanding Variable Importance
+
+As shown on the introduction page, there are a number of data sets which have been combined with the core property sale data to try to understand suburb characteristics. Importantly, these data sets run on time scales which may not align with the property sales which run from 1990 to 2019 (although units were only properly captured from 2001).
+
+The following table summarises the data sets timeframe and provides an explanation for how they were transformed.
+
+```{r echo = FALSE,message =FALSE, warning=FALSE, out.width = "100%"}
+  knitr::kable(data_set_year)
+```
+
+While some variables I've included would suggest powerful predictive capabilities, such as the ARIA scores for access to services or my proxy for Green Space, in a modelling context they are not going to be useful as they have a single value which does not change over time, and was obtained much later than some of the data.
+
+On the other hand, the SEIFA indexes coming out of the ABS and the other Census measures probably can be used to try to understand the impact they have on house or unit prices. Given they are calculated at 5 year windows (withing a changing suburb environment) they are far from perfect, but given the fairly logical transformations I have completed they have some modeling usefulness.
+
+One further transformation I have completed is to try and control for the general growth in values over time. Leaving this in basically shows years as the most relevant variable by far and this is simply because of the very strong growth trend which has been seen over the past 20 years. By first taking the suburb median and then dividing by the NSW median, I am able to control for the general upward movement in the state to a certain degree.
+
+### From 2001
+
+The following graph shows the variable importance scores coming from a random forest generated to model the NSW growth adjusted index from 2001 - 2019, using only the variables available for that period.
+
+```{r echo = FALSE,message =FALSE, warning=FALSE, out.width = "100%"}
+ rf_imp_house_2001 <- readRDS("rf_imp_house_2001.rds")
+
+ggplot(rf_imp_house_2001,aes(x = reorder(variable,importance),y = importance,fill = data_set)) + 
+    geom_bar(stat = "identity") + 
+    coord_flip() + 
+    ggtitle("Houses - Variable Importance 2001 - 2019") +
+    labs(y = "Normalised Variable Importance", x = "Variable", fill = "Data Set") +
+    theme_minimal()+
+    theme(plot.title = element_text(hjust=0.5)) +
+    theme(legend.position="bottom") +
+    guides(fill=guide_legend(nrow=2,byrow=TRUE))
+```
+
+This shows XXXXXX
+
+```{r echo = FALSE,message =FALSE, warning=FALSE, out.width = "100%"}
+ rf_imp_unit_2001 <- readRDS("rf_imp_unit_2001.rds")
+
+ggplot(rf_imp_unit_2001,aes(x = reorder(variable,importance),y = importance,fill = data_set)) + 
+    geom_bar(stat = "identity") + 
+    coord_flip() + 
+    ggtitle("Apartments - Variable Importance 2001 - 2019") +
+    labs(y = "Normalised Variable Importance", x = "Variable", fill = "Data Set") +
+    theme_minimal()+
+    theme(plot.title = element_text(hjust=0.5)) +
+    theme(legend.position="bottom") +
+    guides(fill=guide_legend(nrow=2,byrow=TRUE))
+```
+
+### From 2006
+
+
+Blaha
+
+```{r echo = FALSE,message =FALSE, warning=FALSE, out.width = "100%"}
+ rf_imp_house_2006 <- readRDS("rf_imp_house_2006.rds")
+
+ggplot(rf_imp_house_2006,aes(x = reorder(variable,importance),y = importance,fill = data_set)) + 
+    geom_bar(stat = "identity") + 
+    coord_flip() + 
+    ggtitle("Houses - Variable Importance 2006 - 2019") +
+    labs(y = "Normalised Variable Importance", x = "Variable", fill = "Data Set") +
+    theme_minimal()+
+    theme(plot.title = element_text(hjust=0.5)) +
+    theme(legend.position="bottom") +
+    guides(fill=guide_legend(nrow=2,byrow=TRUE))
+```
+
+This shows XXXXXX
+
+```{r echo = FALSE,message =FALSE, warning=FALSE, out.width = "100%"}
+ rf_imp_unit_2006 <- readRDS("rf_imp_unit_2006.rds")
+
+ggplot(rf_imp_unit_2006,aes(x = reorder(variable,importance),y = importance,fill = data_set)) + 
+    geom_bar(stat = "identity") + 
+    coord_flip() + 
+    ggtitle("Apartments - Variable Importance 2006 - 2019") +
+    labs(y = "Normalised Variable Importance", x = "Variable", fill = "Data Set") +
+    theme_minimal()+
+    theme(plot.title = element_text(hjust=0.5)) +
+    theme(legend.position="bottom") +
+    guides(fill=guide_legend(nrow=2,byrow=TRUE))
+```
+
+### How do these variables help explain prices??
+

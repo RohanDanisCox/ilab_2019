@@ -20,6 +20,7 @@
   library(pryr)
   library(ggrepel)
   library(randomForest)
+  library(parsnip)
 
 # [1] ---- Obtain data ----
 
@@ -174,6 +175,15 @@
   units <- units_5
   
   saveRDS(units,"rmarkdown/units.rds")
+  
+  
+# [3] ---- Load Data ----
+  
+  data <- readRDS("rmarkdown/rmarkdown_data.rds")
+  units <- readRDS("rmarkdown/units.rds")
+  sydney <- readRDS("rmarkdown/map_sydney.rds")
+  rest <- readRDS("rmarkdown/map_rest.rds")
+  centroid <- readRDS("rmarkdown/centroids.rds")
   
 # [3] ---- Develop Visuals ----
   
@@ -484,7 +494,7 @@
     theme(plot.title = element_text(hjust=0.5)) +
     theme(legend.position="bottom", legend.key.width = unit(0.7,"cm"))
   
-#  [3][6] ---- Getting Rich off the Lockout ----
+#  [4][3] ---- Getting Rich off the Lockout ----
   
   #Pyrmont (including the Star City Casino) , 
   #Ultimo, Chippendale, Haymarket, Surry Hills, Elizabeth Bay, Rushcutters Bay and Darlinghurst
@@ -609,8 +619,210 @@
     theme(legend.position = "none")
 
   
+#  [5][1] ---- Variable Importance ----
   
+  data_set_year <- tibble(`Data Set` = c("Property Sale Information",
+                                         "Property Land Information",
+                                         "Recorded Crime by Offence",
+                                         "SEIFA",
+                                         "Census",
+                                         "NSW Government & Non-Government Schools",
+                                         "Mesh Blocks",
+                                         "Metro ARIA"),
+                          `Timeframe` = c("1990 - 2019",
+                                          "2012 - 2018",
+                                          "1995 - 2018",
+                                          "2001,2006,2011,2016",
+                                          "2006,2011,2016",
+                                          "2016",
+                                          "2016",
+                                          "2014"),
+                          Explanation = c("Yearly values were calculated using the average of a rolling 12-month window (calculated quarterly from the previous 12 months of data)",
+                                          "Values updated annually by NSW Valuer General - Extrapolated from 2018 to 2019",
+                                          "Yearly values were aggregated from monthly totals - Extrapolated from 2018 to 2019",
+                                          "Interpolated values between 2001 and 2016 and then extrapolated from 2016 - 2019",
+                                          "Interpolated values between 2006 and 2016 and then extrapolated from 2016 - 2019",
+                                          "Government & Non-Government schools were combined with Government schools to build a proxy of education, but this comes from a single year reference point. The calculated value was allocated to all years",
+                                          "Meshblocks are relevant for the Green Space calculation, but provide only a single year. This value was allocated to all years",
+                                          "Only a single year is available and so this value was allocated to all years going forward"))
   
+  saveRDS(data_set_year,"rmarkdown/data_set_year.rds")
+  
+  data_set_allocation <- tibble(variable = c("violent_crime","dasg_crime","log_crime_score", # Crime
+                                             "education_score", # education
+                                             "green_score","green_score_decile", # green space
+                                             "usual_resident_population","seifa_econ_disadvantage","seifa_econ_adv_disadv", # SEIFA
+                                             "seifa_econ_resources", "seifa_education_occupation", # SEIFA
+                                             "working_age_proportion","senior_citizen_proportion", # Census
+                                             "confirmed_journeys","public_transport_proportion", # Census
+                                             "motor_vehicle_proportion","bicycle_walking_proportion", # Census
+                                             "confirmed_dwellings", "house_and_semi_proportion", # Census
+                                             "unit_proportion", "dwelling_density",  # Census
+                                             "median_land_value","median_land_value_per_sqm", # Land Values
+                                             "aria_overall", "aria_education", "aria_health",
+                                             "aria_shopping", "aria_public_transport", "aria_financial_postal", # ARIA
+                                             "annual_turnover","year"),
+                                data_set = c("Recorded Crime by Offence","Recorded Crime by Offence","Recorded Crime by Offence",
+                                             "NSW Government & Non-Government Schools",
+                                             "Mesh Blocks","Mesh Blocks",
+                                             "SEIFA","SEIFA","SEIFA","SEIFA","SEIFA",
+                                             "Census","Census","Census","Census","Census",
+                                             "Census","Census","Census","Census","Census",
+                                             "Property Land Information","Property Land Information",
+                                             "Metro ARIA","Metro ARIA","Metro ARIA","Metro ARIA","Metro ARIA","Metro ARIA",
+                                             "Property Sale Information","Time"))
+  
+  saveRDS(data_set_allocation,"rmarkdown/data_set_allocation.rds")
+  
+  #  [5][2] ---- From 2001 ----
+  
+  house_data <- data %>%
+    select(suburb_name,year,nsw_control_index) %>%
+    left_join(data_raw, by = c("suburb_name", "year"))
+  
+  unit_data <- units %>%
+    select(suburb_name,year,nsw_control_index) %>%
+    left_join(data_raw, by = c("suburb_name", "year"))
+  
+  house_data_2001_rf <- house_data %>%
+    filter(year >= 2001) %>%
+    select(nsw_control_index,year,
+           violent_crime,dasg_crime,log_crime_score,
+           #education_score,#green_score_decile,
+           usual_resident_population,
+           #working_age_proportion,senior_citizen_proportion,confirmed_journeys,
+           #public_transport_proportion,#motor_vehicle_proportion,bicycle_walking_proportion,
+           #confirmed_dwellings,#house_and_semi_proportion,unit_proportion,dwelling_density,
+           seifa_econ_disadvantage,seifa_econ_adv_disadv,seifa_econ_resources,seifa_education_occupation,
+           #median_land_value_per_sqm,
+           #aria_overall,aria_education,aria_health,aria_shopping,
+           #aria_public_transport,aria_financial_postal,
+           annual_turnover)
+  
+  unit_data_2001_rf <- unit_data %>%
+    filter(year >= 2001) %>%
+    select(nsw_control_index,year,
+           violent_crime,dasg_crime,log_crime_score,
+           #education_score,#green_score_decile,
+           usual_resident_population,
+           #working_age_proportion,senior_citizen_proportion,confirmed_journeys,
+           #public_transport_proportion,#motor_vehicle_proportion,bicycle_walking_proportion,
+           #confirmed_dwellings,#house_and_semi_proportion,unit_proportion,dwelling_density,
+           seifa_econ_disadvantage,seifa_econ_adv_disadv,seifa_econ_resources,seifa_education_occupation,
+           #median_land_value_per_sqm,
+           #aria_overall,aria_education,aria_health,aria_shopping,
+           #aria_public_transport,aria_financial_postal,
+           annual_turnover)
+  
+  rf_reg <- rand_forest(mode = "regression",min_n = 50) %>%
+    set_engine("randomForest")
+  
+  house_2001_rf_fit <- rf_reg %>%
+    fit(data = house_data_2001_rf, formula = nsw_control_index ~ .)
+  
+  unit_2001_rf_fit <- rf_reg %>%
+    fit(data = unit_data_2001_rf, formula = nsw_control_index ~ .)
+  
+  rf_imp_house_2001 <- as_tibble(house_2001_rf_fit$fit$importance, rownames = "variable") %>%
+    mutate(importance = (IncNodePurity - min(IncNodePurity)) / (max(IncNodePurity) - min(IncNodePurity))) %>%
+    left_join(data_set_allocation, by = "variable")
+  
+  rf_imp_unit_2001 <- as_tibble(unit_2001_rf_fit$fit$importance, rownames = "variable") %>%
+    mutate(importance = (IncNodePurity - min(IncNodePurity)) / (max(IncNodePurity) - min(IncNodePurity))) %>%
+    left_join(data_set_allocation, by = "variable")
+  
+  saveRDS(rf_imp_house_2001,"rmarkdown/rf_imp_house_2001.rds")
+  saveRDS(rf_imp_unit_2001,"rmarkdown/rf_imp_unit_2001.rds")
+  
+  ggplot(rf_imp_house_2001,aes(x = reorder(variable,importance),y = importance,fill = data_set)) + 
+    geom_bar(stat = "identity") + 
+    coord_flip() + 
+    ggtitle("Houses - Variable Importance 2001 - 2019") +
+    labs(y = "Normalised Variable Importance", x = "Variable", fill = "Data Set") +
+    theme_minimal()+
+    theme(plot.title = element_text(hjust=0.5)) +
+    theme(legend.position="bottom") +
+    guides(fill=guide_legend(nrow=2,byrow=TRUE))
+  
+  ggplot(rf_imp_unit_2001,aes(x = reorder(variable,importance),y = importance,fill = data_set)) + 
+    geom_bar(stat = "identity") + 
+    coord_flip() + 
+    ggtitle("Apartments - Variable Importance 2001 - 2019") +
+    labs(y = "Normalised Variable Importance", x = "Variable", fill = "Data Set") +
+    theme_minimal()+
+    theme(plot.title = element_text(hjust=0.5)) +
+    theme(legend.position="bottom") +
+    guides(fill=guide_legend(nrow=2,byrow=TRUE))
+  
+  #  [5][2] ---- From 2001 ----
+  
+  house_data_2006_rf <- house_data %>%
+    filter(year >= 2006) %>%
+    select(nsw_control_index,year,
+           violent_crime,dasg_crime,log_crime_score,
+           #education_score,#green_score_decile,
+           usual_resident_population,
+           working_age_proportion,senior_citizen_proportion,confirmed_journeys,
+           public_transport_proportion,motor_vehicle_proportion,bicycle_walking_proportion,
+           confirmed_dwellings,house_and_semi_proportion,unit_proportion,dwelling_density,
+           seifa_econ_disadvantage,seifa_econ_adv_disadv,seifa_econ_resources,seifa_education_occupation,
+           #median_land_value_per_sqm,
+           #aria_overall,aria_education,aria_health,aria_shopping,
+           #aria_public_transport,aria_financial_postal,
+           annual_turnover)
+  
+  unit_data_2006_rf <- unit_data %>%
+    filter(year >= 2006) %>%
+    select(nsw_control_index,year,
+           violent_crime,dasg_crime,log_crime_score,
+           #education_score,#green_score_decile,
+           usual_resident_population,
+           working_age_proportion,senior_citizen_proportion,confirmed_journeys,
+           public_transport_proportion,motor_vehicle_proportion,bicycle_walking_proportion,
+           confirmed_dwellings,house_and_semi_proportion,unit_proportion,dwelling_density,
+           seifa_econ_disadvantage,seifa_econ_adv_disadv,seifa_econ_resources,seifa_education_occupation,
+           #median_land_value_per_sqm,
+           #aria_overall,aria_education,aria_health,aria_shopping,
+           #aria_public_transport,aria_financial_postal,
+           annual_turnover)
+  
+  house_2006_rf_fit <- rf_reg %>%
+    fit(data = house_data_2006_rf, formula = nsw_control_index ~ .)
+  
+  unit_2006_rf_fit <- rf_reg %>%
+    fit(data = unit_data_2006_rf, formula = nsw_control_index ~ .)
+  
+  rf_imp_house_2006 <- as_tibble(house_2006_rf_fit$fit$importance, rownames = "variable") %>%
+    mutate(importance = (IncNodePurity - min(IncNodePurity)) / (max(IncNodePurity) - min(IncNodePurity))) %>%
+    left_join(data_set_allocation, by = "variable")
+  
+  rf_imp_unit_2006 <- as_tibble(unit_2006_rf_fit$fit$importance, rownames = "variable") %>%
+    mutate(importance = (IncNodePurity - min(IncNodePurity)) / (max(IncNodePurity) - min(IncNodePurity))) %>%
+    left_join(data_set_allocation, by = "variable")
+  
+  saveRDS(rf_imp_house_2006,"rmarkdown/rf_imp_house_2006.rds")
+  saveRDS(rf_imp_unit_2006,"rmarkdown/rf_imp_unit_2006.rds")
+  
+  ggplot(rf_imp_house_2006,aes(x = reorder(variable,importance),y = importance,fill = data_set)) + 
+    geom_bar(stat = "identity") + 
+    coord_flip() + 
+    ggtitle("Houses - Variable Importance 2006 - 2019") +
+    labs(y = "Normalised Variable Importance", x = "Variable", fill = "Data Set") +
+    theme_minimal()+
+    theme(plot.title = element_text(hjust=0.5)) +
+    theme(legend.position="bottom") +
+    guides(fill=guide_legend(nrow=2,byrow=TRUE))
+  
+  ggplot(rf_imp_unit_2006,aes(x = reorder(variable,importance),y = importance,fill = data_set)) + 
+    geom_bar(stat = "identity") + 
+    coord_flip() + 
+    ggtitle("Apartments - Variable Importance 2006 - 2019") +
+    labs(y = "Normalised Variable Importance", x = "Variable", fill = "Data Set") +
+    theme_minimal()+
+    theme(plot.title = element_text(hjust=0.5)) +
+    theme(legend.position="bottom") +
+    guides(fill=guide_legend(nrow=2,byrow=TRUE))
+
 # [4] ---- Trash ----
   
   ggplot(data,aes(x = year, y = index, group = suburb_name, colour = gccsa_name)) + 
@@ -707,14 +919,56 @@
   
 # [4] ---- A bit of modelling ---- 
   
-  ## Add back nsw_control_index to data 
+  data_set_year <- tibble(`Data Set` = c("Property Sale Information",
+                                        "Property Land Information",
+                                        "Recorded Crime by Offence",
+                                        "SEIFA",
+                                        "Census",
+                                        "NSW Government & Non-Government Schools",
+                                        "Mesh Blocks",
+                                        "Metro ARIA"),
+                         `Timeframe` = c("1990 - 2019",
+                                    "2012 - 2018",
+                                    "1995 - 2018",
+                                    "2001,2006,2011,2016",
+                                    "2006,2011,2016",
+                                    "2016",
+                                    "2016",
+                                    "2014"),
+                         Explanation = c("Yearly values were calculated using the average of a rolling 12-month window (calculated quarterly from the previous 12 months of data)",
+                                         "Values updated annually by NSW Valuer General - Extrapolated from 2018 to 2019",
+                                         "Yearly values were aggregated from monthly totals - Extrapolated from 2018 to 2019",
+                                         "Interpolated values between 2001 and 2016 and then extrapolated from 2016 - 2019",
+                                         "Interpolated values between 2006 and 2016 and then extrapolated from 2016 - 2019",
+                                         "Government & Non-Government schools were combined with Government schools to build a proxy of education, but this comes from a single year reference point. The calculated value was allocated to all years",
+                                         "Meshblocks are relevant for the Green Space calculation, but provide only a single year. This value was allocated to all years",
+                                         "Only a single year is available and so this value was allocated to all years going forward"))
   
-  data_2 <- index_3 %>%
+  ## Add back nsw_control_index to data 
+  slice(ordered,63366)
+  
+  house_data <- data %>%
     select(suburb_name,year,nsw_control_index) %>%
-    left_join(data)
+    left_join(data_raw, by = c("suburb_name", "year"))
+  
+  unit_data <- units %>%
+    select(suburb_name,year,nsw_control_index) %>%
+    left_join(data_raw, by = c("suburb_name", "year"))
+  
+  
+  ## Correlation
+  
+  house_data_numeric <- house_data %>%
+    select(3,2,10:37,40:41)
+  cor_full <- as.data.frame(cor(house_data_numeric, use = "pairwise.complete.obs"))
+  cor <- as_tibble(cor_full, rownames = "variable")
+  
+  ggplot(cor, aes(y = nsw_control_index,x = variable)) +
+    geom_bar(stat = "identity") + 
+    coord_flip()
   
   # Simple linear model
-  simple_linear_model <- lm(data = data_2,formula = nsw_control_index ~ year +
+  simple_linear_model <- lm(data = house_data,formula = nsw_control_index ~ year +
                               log_crime_score + 
                               green_score_decile +
                               education_score + 
@@ -730,16 +984,59 @@
   summary(simple_linear_model)
   
   # Random Forest
+  ordered <- data_raw %>%
+    arrange(year)
   
-  random_forest_data <- data_2 %>%
-    select(3,2,12:17,19:21,23:29)
+  check <- ordered %>%
+    map_df(~(data.frame(first = which(!is.na(.x)),
+                        na_count = sum(is.na(.x)))),
+           .id = "variable")
   
-  base_random_forest <- randomForest(data = random_forest_data,
-                                     y = random_forest_data[,1],
-                                     x = random_forest_data[,2:18])
+  check_1 <- check %>%
+    group_by(variable) %>%
+    summarise(first=first(first))
+  
+  house_data_rf <- house_data_numeric %>%
+    select(nsw_control_index,year,log_crime_score,education_score,
+           green_score_decile,usual_resident_population,working_age_proportion,     
+           senior_citizen_proportion,confirmed_journeys,public_transport_proportion,
+           motor_vehicle_proportion,bicycle_walking_proportion,confirmed_dwellings,      
+           house_and_semi_proportion,unit_proportion,dwelling_density,
+           seifa_econ_disadvantage,seifa_econ_adv_disadv,seifa_econ_resources,     
+           seifa_education_occupation,
+           #median_land_value_per_sqm,
+           #aria_overall,aria_education,aria_health,aria_shopping,
+           #aria_public_transport,aria_financial_postal,
+           annual_turnover)
+  
+  rf_reg <- rand_forest(mode = "regression", mtry = 4, trees = 200, min_n = 50) %>%
+    set_engine("randomForest")
+  
+  rf_fit <- rf_reg %>%
+    fit(data = house_data_rf, formula = nsw_control_index ~ .)
+  
+  rf_importance <- as_tibble(rf_fit$fit$importance, rownames = "variable") %>%
+    mutate(importance = IncNodePurity) 
+  
+  ggplot(rf_importance,aes(x = variable,y = importance)) + 
+    geom_bar(stat = "identity") + 
+    coord_flip()
+  
+  ?rand_forest
+  plot(rf_xy_fit$fit$importance)
+  
+  varImpPlot(rf_xy_fit)
+  randomForest(Species ~ ., data=iris[-na.row,])
+  
+  base_random_forest <- randomForest(data = house_data_numeric,
+                                     y = house_data_numeric[,1],
+                                     x = house_data_numeric[,2:32])
     
-    ?randomForest
+  base_random_forest <- randomForest(data = house_data_numeric,
+                                     nsw_control_index ~ year + violent_crime)
   
+  varImpPlot(base_random_forest)
+    ?rand_forest
   
   # to package up
   
