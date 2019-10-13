@@ -632,19 +632,19 @@
                           `Timeframe` = c("1990 - 2019",
                                           "2012 - 2018",
                                           "1995 - 2018",
-                                          "2001,2006,2011,2016",
-                                          "2006,2011,2016",
+                                          "2001, 2006, 2011, 2016",
+                                          "2006, 2011, 2016",
                                           "2016",
                                           "2016",
                                           "2014"),
-                          Explanation = c("Yearly values were calculated using the average of a rolling 12-month window (calculated quarterly from the previous 12 months of data)",
-                                          "Values updated annually by NSW Valuer General - Extrapolated from 2018 to 2019",
-                                          "Yearly values were aggregated from monthly totals - Extrapolated from 2018 to 2019",
-                                          "Interpolated values between 2001 and 2016 and then extrapolated from 2016 - 2019",
-                                          "Interpolated values between 2006 and 2016 and then extrapolated from 2016 - 2019",
-                                          "Government & Non-Government schools were combined with Government schools to build a proxy of education, but this comes from a single year reference point. The calculated value was allocated to all years",
-                                          "Meshblocks are relevant for the Green Space calculation, but provide only a single year. This value was allocated to all years",
-                                          "Only a single year is available and so this value was allocated to all years going forward"))
+                          Explanation = c("Yearly values were calculated using the average of a rolling 12-month window (calculated quarterly from the previous 12 months of data).",
+                                          "Values updated annually by NSW Valuer General - Extrapolated from 2018 to 2019.",
+                                          "Yearly values were aggregated from monthly totals - Extrapolated from 2018 to 2019.",
+                                          "Interpolated values between 2001 and 2016 and then extrapolated from 2016 - 2019.",
+                                          "Interpolated values between 2006 and 2016 and then extrapolated from 2016 - 2019.",
+                                          "Government & Non-Government schools were combined with Government schools to build a proxy of education, but this comes from a single year reference point. The calculated value was allocated to all years.",
+                                          "Meshblocks are relevant for the Green Space calculation, but provide only a single year. This value was allocated to all years.",
+                                          "Only a single year is available and so this value was allocated to all years going forward."))
   
   saveRDS(data_set_year,"rmarkdown/data_set_year.rds")
   
@@ -731,8 +731,8 @@
     mutate(importance = (IncNodePurity - min(IncNodePurity)) / (max(IncNodePurity) - min(IncNodePurity))) %>%
     left_join(data_set_allocation, by = "variable")
   
-  saveRDS(rf_imp_house_2001,"rmarkdown/rf_imp_house_2001.rds")
-  saveRDS(rf_imp_unit_2001,"rmarkdown/rf_imp_unit_2001.rds")
+  saveRDS(house_2001_rf_fit,"rmarkdown/house_2001_rf_fit.rds")
+  saveRDS(unit_2001_rf_fit,"rmarkdown/unit_2001_rf_fit.rds")
   
   ggplot(rf_imp_house_2001,aes(x = reorder(variable,importance),y = importance,fill = data_set)) + 
     geom_bar(stat = "identity") + 
@@ -754,7 +754,10 @@
     theme(legend.position="bottom") +
     guides(fill=guide_legend(nrow=2,byrow=TRUE))
   
-  #  [5][2] ---- From 2001 ----
+  round(max(house_2001_rf_fit$fit$rsq),3)*100
+  round(max(unit_2001_rf_fit$fit$rsq),3)*100
+  
+  #  [5][3] ---- From 2006 ----
   
   house_data_2006_rf <- house_data %>%
     filter(year >= 2006) %>%
@@ -800,8 +803,8 @@
     mutate(importance = (IncNodePurity - min(IncNodePurity)) / (max(IncNodePurity) - min(IncNodePurity))) %>%
     left_join(data_set_allocation, by = "variable")
   
-  saveRDS(rf_imp_house_2006,"rmarkdown/rf_imp_house_2006.rds")
-  saveRDS(rf_imp_unit_2006,"rmarkdown/rf_imp_unit_2006.rds")
+  saveRDS(house_2006_rf_fit,"rmarkdown/house_2006_rf_fit.rds")
+  saveRDS(unit_2006_rf_fit,"rmarkdown/unit_2006_rf_fit.rds")
   
   ggplot(rf_imp_house_2006,aes(x = reorder(variable,importance),y = importance,fill = data_set)) + 
     geom_bar(stat = "identity") + 
@@ -822,6 +825,88 @@
     theme(plot.title = element_text(hjust=0.5)) +
     theme(legend.position="bottom") +
     guides(fill=guide_legend(nrow=2,byrow=TRUE))
+  
+  round(max(house_2006_rf_fit$fit$rsq),3)*100
+  round(max(unit_2006_rf_fit$fit$rsq),3)*100
+  
+#  [5][4] ---- Linear Model ----
+  
+  house_data_2006_lm <- house_data %>%
+    filter(year >= 2006) %>%
+    select(nsw_control_index,year,
+           #violent_crime,dasg_crime,log_crime_score,
+           #education_score,#green_score_decile,
+           usual_resident_population,
+           working_age_proportion,senior_citizen_proportion,confirmed_journeys,
+           public_transport_proportion,motor_vehicle_proportion,bicycle_walking_proportion,
+           confirmed_dwellings,house_and_semi_proportion,unit_proportion,dwelling_density,
+           seifa_econ_disadvantage,seifa_econ_adv_disadv,seifa_econ_resources,seifa_education_occupation,
+           #median_land_value_per_sqm,
+           #aria_overall,aria_education,aria_health,aria_shopping,
+           #aria_public_transport,aria_financial_postal,
+           #annual_turnover
+           )
+  
+  scaled_house_data_2006_lm <- as_tibble(scale(house_data_2006_lm))
+    
+  house_2006_lm <- lm(data = scaled_house_data_2006_lm,formula = nsw_control_index ~ year + usual_resident_population +
+         working_age_proportion + senior_citizen_proportion + confirmed_journeys + 
+         public_transport_proportion + motor_vehicle_proportion + bicycle_walking_proportion + 
+         confirmed_dwellings + house_and_semi_proportion + unit_proportion + dwelling_density + 
+         seifa_econ_disadvantage + seifa_econ_adv_disadv + seifa_econ_resources + 
+         seifa_education_occupation)
+  
+  house_lm <- summary(house_2006_lm)
+  
+  saveRDS(house_lm,"rmarkdown/house_lm.rds")
+  
+  house_2006_lm_coef <- as_tibble(house_lm[["coefficients"]],rownames = "Variable") %>%
+    mutate_if(is.numeric,round,4) %>%
+    mutate(`House Estimate` = Estimate,
+           `House P-Value` = `Pr(>|t|)`) %>%
+    select(1,6,7)
+  
+  unit_data_2006_lm <- unit_data %>%
+    filter(year >= 2006) %>%
+    select(nsw_control_index,year,
+           #violent_crime,dasg_crime,log_crime_score,
+           #education_score,#green_score_decile,
+           usual_resident_population,
+           working_age_proportion,senior_citizen_proportion,confirmed_journeys,
+           public_transport_proportion,motor_vehicle_proportion,bicycle_walking_proportion,
+           confirmed_dwellings,house_and_semi_proportion,unit_proportion,dwelling_density,
+           seifa_econ_disadvantage,seifa_econ_adv_disadv,seifa_econ_resources,seifa_education_occupation,
+           #median_land_value_per_sqm,
+           #aria_overall,aria_education,aria_health,aria_shopping,
+           #aria_public_transport,aria_financial_postal,
+           #annual_turnover
+    )
+ 
+  scaled_unit_data_2006_lm <- as_tibble(scale(unit_data_2006_lm))
+  
+  unit_2006_lm <- lm(data = scaled_unit_data_2006_lm,formula = nsw_control_index ~ year + usual_resident_population +
+                        working_age_proportion + senior_citizen_proportion + confirmed_journeys + 
+                        public_transport_proportion + motor_vehicle_proportion + bicycle_walking_proportion + 
+                        confirmed_dwellings + house_and_semi_proportion + unit_proportion + dwelling_density + 
+                        seifa_econ_disadvantage + seifa_econ_adv_disadv + seifa_econ_resources + 
+                        seifa_education_occupation)
+  
+  unit_lm <- summary(unit_2006_lm)
+  
+  unit_2006_lm_coef <- as_tibble(unit_lm[["coefficients"]],rownames = "Variable") %>%
+    mutate_if(is.numeric,round,4) %>%
+    mutate(`Apartment Estimate` = Estimate,
+           `Apartment P-Value` = `Pr(>|t|)`) %>%
+    select(1,6,7)
+  
+  lm_coef <- house_2006_lm_coef %>%
+    left_join(unit_2006_lm_coef, by = "Variable")
+  
+  saveRDS(unit_lm,"rmarkdown/unit_lm.rds")
+  
+  
+  ??cell_spec
+  summary(simple_linear_model)
 
 # [4] ---- Trash ----
   
@@ -930,8 +1015,8 @@
                          `Timeframe` = c("1990 - 2019",
                                     "2012 - 2018",
                                     "1995 - 2018",
-                                    "2001,2006,2011,2016",
-                                    "2006,2011,2016",
+                                    "2001, 2006, 2011, 2016",
+                                    "2006, 2011, 2016",
                                     "2016",
                                     "2016",
                                     "2014"),

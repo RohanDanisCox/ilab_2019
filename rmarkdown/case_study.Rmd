@@ -10,7 +10,8 @@ library(ggplot2)
 library(ggrepel)
 library(dplyr)
 library(sf)
-#library(gridExtra)
+library(knitr)
+library(kableExtra)
 
 data <- readRDS("rmarkdown_data.rds")
 units <- readRDS("units.rds")
@@ -32,17 +33,19 @@ unit_growth_by_sa4 <- units %>%
 ```
 
 ## Houses - A Story of Growth
-The overwhelming sentiment in Australia is that investing in houses is the perfect investment as it doubles every 7 years while at the same time being the safest investment available. These two features are typically considered to be competing forces and are what the Risk/Return tradeoff characterises. But seemingly, in Australia this tradeoff doesn't apply.
+The overwhelming sentiment in Australia is that investing in houses is as safe as putting money in the bank, except the value of the house will double every 7 years. These two features, security and growth, are typically considered to be competing forces and are what the Risk/Return trade-off characterises. 
+
+This case study looks at NSW property over the last 20 years and finds that for the most part, this trade-off hasn't applied. Over the last year there has been discussion of a burst Sydney property bubble, but that seems to have been overwhelmingly answered over the past several months of growth. This case study will not extend to that bounceback as it considers only the period from 2000 until the end of June 2019.
 
 <br>
 
 ### 1 - A Story of Growth
 <br>
-If you were looking at buying a house in NSW in the year 2000, you basically couldn't go wrong. Prices weren't outrageous and there hadn't been all that much growth over the proceeding 10 years. Across NSW, the median house price was $`r data %>% filter(year == 2000) %>% summarise(median = median(house_median)) %>% round(0) %>% pull() %>% format(digits = 2, big.mark = ",")`. In Sydney, this was a bit higher at $`r data %>% filter(year == 2000) %>% filter(gccsa_name == "Greater Sydney") %>% summarise(median = median(house_median)) %>% round(0) %>% pull() %>% format(digits = 2, big.mark = ",")`.
+If you were looking at buying a house in NSW in the year 2000, you basically couldn't go wrong. Prices weren't yet outrageous as there hadn't been all that much growth over the proceeding 10 years. Across NSW, the median house price was $`r data %>% filter(year == 2000) %>% summarise(median = median(house_median)) %>% round(0) %>% pull() %>% format(digits = 2, big.mark = ",")`. In Sydney, this was a bit higher at $`r data %>% filter(year == 2000) %>% filter(gccsa_name == "Greater Sydney") %>% summarise(median = median(house_median)) %>% round(0) %>% pull() %>% format(digits = 2, big.mark = ",")`.
 
-The median return over the next 20 years was `r data %>% filter(year == 2019) %>% summarise(median = median(index)) %>% mutate(median = median -100) %>% round(0) %>% pull() %>% format(digits = 2, big.mark = ",")`%, with the absolute worst return being `r data %>% filter(year == 2019) %>% summarise(min = min(index)) %>% mutate(min = min -100) %>% round(0) %>% pull() %>% format(digits = 2, big.mark = ",")`% at `r data %>% filter(year == 2019) %>% arrange(index) %>% select(suburb_name) %>% head(1)`. On the other hand, the average person who bought a house in `r data %>% filter(year == 2019) %>% arrange(desc(index)) %>% select(suburb_name) %>% head(1)`, saw a growth rate of `r data %>% filter(year == 2019) %>% summarise(max = max(index)) %>% mutate(max = max -100) %>% round(0) %>% pull() %>% format(digits = 2, big.mark = ",")`%. 
+The median return over the next 20 years was `r data %>% filter(year == 2019) %>% summarise(median = median(index)) %>% mutate(median = median -100) %>% round(0) %>% pull() %>% format(digits = 2, big.mark = ",")`% (that's equivalent to nearly tripling your original investment and equates to an annual return of 7.5% per annum), with the absolute worst return being `r data %>% filter(year == 2019) %>% summarise(min = min(index)) %>% mutate(min = min -100) %>% round(0) %>% pull() %>% format(digits = 2, big.mark = ",")`% at `r data %>% filter(year == 2019) %>% arrange(index) %>% select(suburb_name) %>% head(1)`. On the other hand, the average person who bought a house in `r data %>% filter(year == 2019) %>% arrange(desc(index)) %>% select(suburb_name) %>% head(1)`, saw a growth rate of `r data %>% filter(year == 2019) %>% summarise(max = max(index)) %>% mutate(max = max -100) %>% round(0) %>% pull() %>% format(digits = 2, big.mark = ",")`% (equivalent to 14.3% per annum). 
 
-The below graph shows how much of the state grew solidly between 2001 and 2004, plateaued between 2005 and 2009 and then resumed growth from 2009 with takeoff after 2012. Interestingly, these movements coincide strongly with [RBA Cash Rate](https://www.rba.gov.au/statistics/cash-rate/) reductions (between February 2001 and December 2001 the Cash Rate fell 2%, between September 2008 and April 2009 the Cash Rate fell 4.25% and there has been a slow reduction down to 0.75% since November 2011). I've shown reductions in the Cash Rate (i.e. Expansionary Policy) in green and increases (i.e. Contractionary Policy) in red. 
+The below graph shows how much of the state grew solidly between 2001 and 2004, plateaued between 2005 and 2009 and then resumed growth from 2009, significantly so after 2012. Interestingly, these movements coincide strongly with [RBA Cash Rate](https://www.rba.gov.au/statistics/cash-rate/) reductions (between February 2001 and December 2001 the Cash Rate fell 2%, between September 2008 and April 2009 the Cash Rate fell 4.25% and there has been a slow reduction down to 0.75% since November 2011). This is highlighted in the below graph where reductions in the Cash Rate (i.e. Expansionary Policy) are shown in green and increases (i.e. Contractionary Policy) in red. 
 
 ```{r echo = FALSE,message =FALSE, warning=FALSE, out.width = "100%"}
   ggplot(data,aes(x = year, y = index, group = suburb_name)) + 
@@ -52,7 +55,7 @@ The below graph shows how much of the state grew solidly between 2001 and 2004, 
     theme(plot.title = element_text(hjust=0.5)) +
     geom_hline(yintercept=100, linetype="dashed", color = "red") + 
     scale_y_continuous(breaks = c(100,500,1000)) + 
-    labs(x = "Year", y = "Price Index from year 2000") +
+    labs(x = "Year", y = "Price Index from Year 2000") +
     annotate("rect", xmin=2001.1, xmax=2001.9, ymin=0, ymax=Inf, alpha=0.1, fill="green") + 
     annotate("rect", xmin=2008.7, xmax=2009.3, ymin=0, ymax=Inf, alpha=0.1, fill="green") + 
     annotate("rect", xmin=2011.9, xmax=2019, ymin=0, ymax=Inf, alpha=0.1, fill="green") +
@@ -64,14 +67,14 @@ The below graph shows how much of the state grew solidly between 2001 and 2004, 
 <br>
 The prevailing wisdom regarding property prices seems to be that property prices tend to rise fastest in the Australian capital cities, particularly Sydney and Melbourne. While the data sees this over the last 7 years, the story isn't as strong in the first property boom of this millenium. 
 
-The below graph shows the above data, but splits the state into Greater Sydney and the rest of NSW. What is clear is that initially regional areas grow faster and it is only in the later spurt that Sydney catches up and in some areas surpases the regional growth.
+The below graph shows the above data, but splits the state into Greater Sydney and the rest of NSW. What is clear is that initially regional areas grow faster and it is only in later year that Sydney catches up and in some areas surpases the regional growth.
 
 ```{r echo = FALSE,message =FALSE, warning=FALSE, out.width = "100%"}
   ggplot(data,aes(x = year, y = index, group = suburb_name, colour = gccsa_name)) + 
       geom_line(alpha = 0.1) +
       scale_y_continuous(breaks = c(100,500,1000)) +
-      ggtitle("Regional NSW Moved First") +
-      labs(x = "Year", y = "Price Index from year 2000", colour = "Region") +
+      ggtitle("Regional NSW Grew First") +
+      labs(x = "Year", y = "Price Index from Year 2000", colour = "Region") +
       theme_minimal()+
       theme(plot.title = element_text(hjust=0.5)) +
       theme(legend.position="bottom") + 
@@ -89,7 +92,10 @@ The table below shows the average cumulative growth in house prices for all 28 s
            `Greater Sydney or Rest of NSW` = gccsa_name) %>%
     arrange(desc(`Average Price Index in 2019`))
 
-  knitr::kable(table_1)
+  kable(table_1) %>%
+    kable_styling(bootstrap_options = c("striped", "hover","condensed")) %>%
+    row_spec(c(1,6,9,10,12:14,16:22,25), background = "#fddfdd") %>% #Greater Sydney
+    row_spec(c(2:5,7,8,11,15,23,24,26:28), background = "#ebfeff") # Rest of NSW
 ```
 
 Visualising these figures on the map of NSW shows an obvious bias towards coastal regions, but also a slight lull for the coastal regions which are closer to Greater Sydney. This might suggest a preference to either be in the thick of it on Bondi Beach or get away from everything, except the beach. 
@@ -190,6 +196,8 @@ ggplot(rest) +
 
 ### 5 - Top 10 Greater Sydney Suburbs
 
+Turning attention to Sydney, St Leonards has had some very perculiar growth (at least in 2017 and 2018), while Queenscliff north of Manly has consistently been a top performer.
+
 ```{r echo = FALSE,message =FALSE, warning=FALSE, out.width = "100%"}
   ggplot(data %>% 
            filter(gccsa_name == "Greater Sydney") %>% 
@@ -209,7 +217,7 @@ ggplot(rest) +
     scale_x_continuous(expand = c(0.1,0.1,0.3,0)) +
     scale_y_continuous(breaks = c(100,500,1000)) +
     ggtitle("Top 10 - Greater Sydney") +
-    labs(x = "Year", y = "Price Index from year 2000", colour = "SA4") +
+    labs(x = "Year", y = "Price Index from Year 2000", colour = "SA4") +
     theme_minimal()+
     theme(plot.title = element_text(hjust=0.5)) +
     theme(legend.position="bottom") + 
@@ -244,7 +252,7 @@ ggplot(sydney) +
                     mapping = aes(x,y,label = suburb_name),
                     direction = "both", size= 2.5, segment.alpha = 0.4) +
     scale_x_continuous(expand = c(0.1,0.1,0.3,0)) +
-    ggtitle("Top 10 - Greater Sydney (Locations)") +
+    ggtitle("Top 10 - Greater Sydney") +
     labs(fill = "SA4") +
     theme_minimal()+
     theme(plot.title = element_text(hjust=0.5)) +
@@ -280,6 +288,8 @@ ggplot(sydney) +
           axis.title.y=element_blank()) +
     guides(fill=guide_legend(nrow=2,byrow=TRUE))
 ```
+
+<br> 
 
 ## Apartments - Growing in the West
 
@@ -432,7 +442,7 @@ The below graph shows the 9 suburbs where lockout laws are in place and illustra
                     direction = "y",hjust = -0.5, size= 3, segment.alpha = 0.4) + 
     geom_vline(xintercept = 2014.15, linetype="dashed", color = "red") +
     scale_x_continuous(expand = c(0.1,0.1,0.3,0)) +
-    scale_y_continuous(breaks = c(100,500,1000)) +
+    scale_y_continuous(breaks = c(100,200,300,400,500)) +
     ggtitle("Lockout Impact") +
     labs(x = "Year", y = "Price Index from year 2001", colour = "SA4") +
     theme_minimal()+
@@ -442,7 +452,7 @@ The below graph shows the 9 suburbs where lockout laws are in place and illustra
                                  nrow=2,byrow=TRUE))
 ```
 
-The below graph dispels that thought however as it shows nothing special at all happening in the Sydney Inner City Statistical Area 3 (SA3) where all of these suburbs reside.
+The below graph dispels that thought however, as it shows nothing special at all happening in the Sydney Inner City Statistical Area 3 (SA3) where all of these suburbs reside, relative to other central Sydney suburbs. Interestingly, this is the first time the 2018-19 reduction in prices looks obvious.
 
 ```{r echo = FALSE,message =FALSE, warning=FALSE, out.width = "100%"}
   lockout_agg <- units %>%
@@ -471,28 +481,38 @@ The below graph dispels that thought however as it shows nothing special at all 
     theme(legend.position = "none")
 ```
 
+<br>
+
 ## Understanding Variable Importance
 
-As shown on the introduction page, there are a number of data sets which have been combined with the core property sale data to try to understand suburb characteristics. Importantly, these data sets run on time scales which may not align with the property sales which run from 1990 to 2019 (although units were only properly captured from 2001).
+As shown on the introduction page, there are a number of data sets which have been combined with the core property sale data to try to understand suburb characteristics. Importantly, these data sets run on time scales which may not align with the property sales data (covering 1990 to 2019, although units were only properly captured from 2001).
 
-The following table summarises the data sets timeframe and provides an explanation for how they were transformed.
+The following table summarises each data set's timeframe and provides an explanation for how they were transformed.
 
 ```{r echo = FALSE,message =FALSE, warning=FALSE, out.width = "100%"}
-  knitr::kable(data_set_year)
+  kable(data_set_year) %>%
+    kable_styling(bootstrap_options = c("striped", "hover","condensed"))
 ```
 
 While some variables I've included would suggest powerful predictive capabilities, such as the ARIA scores for access to services or my proxy for Green Space, in a modelling context they are not going to be useful as they have a single value which does not change over time, and was obtained much later than some of the data.
 
-On the other hand, the SEIFA indexes coming out of the ABS and the other Census measures probably can be used to try to understand the impact they have on house or unit prices. Given they are calculated at 5 year windows (withing a changing suburb environment) they are far from perfect, but given the fairly logical transformations I have completed they have some modeling usefulness.
+On the other hand, the SEIFA indexes coming out of the ABS and the other Census measures probably can be used to try to understand the impact they have on house or unit prices. Given they are calculated at 5 year windows (within a changing suburb environment) they are far from perfect, but given the fairly logical transformations I have completed, they have some modeling usefulness.
 
-One further transformation I have completed is to try and control for the general growth in values over time. Leaving this in basically shows years as the most relevant variable by far and this is simply because of the very strong growth trend which has been seen over the past 20 years. By first taking the suburb median and then dividing by the NSW median, I am able to control for the general upward movement in the state to a certain degree.
+One further transformation I have completed is to try and control for the general growth in values over time. Leaving this in basically shows years as the most relevant variable by far and this is simply because of the very strong growth trend seen over the past 20 years. By first taking the suburb median and then dividing by the NSW median, I am able to control for the general upward movement in the state to a certain degree.
 
-### From 2001
+<br>
+
+### Variable Importance 2001 - 2019
 
 The following graph shows the variable importance scores coming from a random forest generated to model the NSW growth adjusted index from 2001 - 2019, using only the variables available for that period.
 
 ```{r echo = FALSE,message =FALSE, warning=FALSE, out.width = "100%"}
- rf_imp_house_2001 <- readRDS("rf_imp_house_2001.rds")
+
+house_2001_rf_fit <- readRDS("house_2001_rf_fit.rds")
+
+rf_imp_house_2001 <- as_tibble(house_2001_rf_fit$fit$importance, rownames = "variable") %>%
+    mutate(importance = (IncNodePurity - min(IncNodePurity)) / (max(IncNodePurity) - min(IncNodePurity))) %>%
+    left_join(data_set_allocation, by = "variable")
 
 ggplot(rf_imp_house_2001,aes(x = reorder(variable,importance),y = importance,fill = data_set)) + 
     geom_bar(stat = "identity") + 
@@ -505,10 +525,16 @@ ggplot(rf_imp_house_2001,aes(x = reorder(variable,importance),y = importance,fil
     guides(fill=guide_legend(nrow=2,byrow=TRUE))
 ```
 
-This shows XXXXXX
+The above chart, showing variable importance when the dependent variable is house prices, illustrates that the SEIFA indexes carry a fair bit of information. The model built using these variables explains about `r round(max(house_2001_rf_fit$fit$rsq),3)*100`% of the variance in the dependent variable. 
+
+The below chart, covering apartment prices assigns less importance to the SEIFA indexes, but they are still much more relevant than crime values and the gross amount of turnover in property. This model is explaining about `r round(max(house_2001_rf_fit$fit$rsq),3)*100`% of the variance in the data.
 
 ```{r echo = FALSE,message =FALSE, warning=FALSE, out.width = "100%"}
- rf_imp_unit_2001 <- readRDS("rf_imp_unit_2001.rds")
+unit_2001_rf_fit <- readRDS("unit_2001_rf_fit.rds")
+
+rf_imp_unit_2001 <- as_tibble(unit_2001_rf_fit$fit$importance, rownames = "variable") %>%
+    mutate(importance = (IncNodePurity - min(IncNodePurity)) / (max(IncNodePurity) - min(IncNodePurity))) %>%
+    left_join(data_set_allocation, by = "variable")
 
 ggplot(rf_imp_unit_2001,aes(x = reorder(variable,importance),y = importance,fill = data_set)) + 
     geom_bar(stat = "identity") + 
@@ -521,13 +547,20 @@ ggplot(rf_imp_unit_2001,aes(x = reorder(variable,importance),y = importance,fill
     guides(fill=guide_legend(nrow=2,byrow=TRUE))
 ```
 
-### From 2006
+<br>
 
+### Variable Importance 2006 - 2019
 
-Blaha
+While a random forest can calculate variable importance over variables with missing values, it is actually interpolating a value in some fashion (often the mean) and so doesn't make a whole lot of sense. It therefore makes a bit more sense to shorten the window when looking to include Census data which I have since 2006. 
+
+The below graphs shows the normalised variable importance from two more random forests, one each for houses and apartments. 
 
 ```{r echo = FALSE,message =FALSE, warning=FALSE, out.width = "100%"}
- rf_imp_house_2006 <- readRDS("rf_imp_house_2006.rds")
+house_2006_rf_fit <- readRDS("house_2006_rf_fit.rds")
+
+rf_imp_house_2006 <- as_tibble(house_2006_rf_fit$fit$importance, rownames = "variable") %>%
+    mutate(importance = (IncNodePurity - min(IncNodePurity)) / (max(IncNodePurity) - min(IncNodePurity))) %>%
+    left_join(data_set_allocation, by = "variable")
 
 ggplot(rf_imp_house_2006,aes(x = reorder(variable,importance),y = importance,fill = data_set)) + 
     geom_bar(stat = "identity") + 
@@ -540,10 +573,14 @@ ggplot(rf_imp_house_2006,aes(x = reorder(variable,importance),y = importance,fil
     guides(fill=guide_legend(nrow=2,byrow=TRUE))
 ```
 
-This shows XXXXXX
+Once again the SEIFA indexes for education/employment resources and advantage/disadvanage feature highly. Interestingly however, the proportion of journeys to work by public transport is now above the time variable and several other census scores relating to transport and the make properties have relevant importance. 
 
 ```{r echo = FALSE,message =FALSE, warning=FALSE, out.width = "100%"}
- rf_imp_unit_2006 <- readRDS("rf_imp_unit_2006.rds")
+unit_2006_rf_fit <- readRDS("unit_2006_rf_fit.rds")
+
+rf_imp_unit_2006 <- as_tibble(unit_2006_rf_fit$fit$importance, rownames = "variable") %>%
+    mutate(importance = (IncNodePurity - min(IncNodePurity)) / (max(IncNodePurity) - min(IncNodePurity))) %>%
+    left_join(data_set_allocation, by = "variable")
 
 ggplot(rf_imp_unit_2006,aes(x = reorder(variable,importance),y = importance,fill = data_set)) + 
     geom_bar(stat = "identity") + 
@@ -556,5 +593,47 @@ ggplot(rf_imp_unit_2006,aes(x = reorder(variable,importance),y = importance,fill
     guides(fill=guide_legend(nrow=2,byrow=TRUE))
 ```
 
-### How do these variables help explain prices??
+### How Variables Explain Prices
 
+While a random forest does a useful job of identifying influential variables, it doesn't give a clear indication of how the dependent variable (price index controlled for NSW price growth) is influenced by the independent variables (everything else, but in this case only the variables with some importance from the previous section).
+
+Below are two tables showing the summary output from linear models calculated on the NSW controlled 2006 - 2019 price indexes for houses and apartments. I've scaled the data (to a mean of 0 and standard deviation 1) as it helps to interpret the impact of each variable.
+
+The correct way to respond the coefficients below is that all else being equal, a unit movement in the variable has the coefficient impact on the price index. Therefore, variables with positive coefficients contribute to prices and variables with negative coefficients detract from prices.
+
+```{r echo = FALSE,message =FALSE, warning=FALSE, out.width = "100%"}
+house_lm <- readRDS("house_lm.rds")
+
+house_2006_lm_coef <- as_tibble(house_lm[["coefficients"]],rownames = "Variable") %>%
+    mutate_if(is.numeric,round,4) %>%
+    mutate(`House Estimate` = Estimate,
+           `House P-Value` = `Pr(>|t|)`) %>%
+    select(1,6,7)
+
+unit_lm <- readRDS("unit_lm.rds")
+
+unit_2006_lm_coef <- as_tibble(unit_lm[["coefficients"]],rownames = "Variable") %>%
+    mutate_if(is.numeric,round,4) %>%
+    mutate(`Apartment Estimate` = Estimate,
+           `Apartment P-Value` = `Pr(>|t|)`) %>%
+    select(1,6,7)
+
+lm_coef <- house_2006_lm_coef %>%
+    left_join(unit_2006_lm_coef, by = "Variable")
+
+lm_coef %>%
+  mutate(`House Estimate` = cell_spec(`House Estimate`, "html",
+                                      background = case_when(`House Estimate` > 0 &
+                                                               `House P-Value` < 0.05 ~ "#a7faad",
+                                                             `House Estimate` < 0 &
+                                                               `House P-Value` < 0.05 ~ "#faada7",
+                                                             TRUE ~ "#bebebe")),
+         `Apartment Estimate` = cell_spec(`Apartment Estimate`, "html",
+                                      background = case_when(`Apartment Estimate` > 0 &
+                                                               `Apartment P-Value` < 0.05 ~ "#a7faad",
+                                                             `Apartment Estimate` < 0 &
+                                                               `Apartment P-Value` < 0.05 ~ "#faada7",
+                                                             TRUE ~ "#bebebe"))) %>%
+  kable(format = "html", escape = F, align = c("lrrrr")) %>%
+  kable_styling(bootstrap_options = c("condensed"))
+```
