@@ -837,24 +837,30 @@
            #violent_crime,dasg_crime,log_crime_score,
            #education_score,#green_score_decile,
            usual_resident_population,
-           working_age_proportion,senior_citizen_proportion,confirmed_journeys,
-           public_transport_proportion,motor_vehicle_proportion,bicycle_walking_proportion,
-           confirmed_dwellings,house_and_semi_proportion,unit_proportion,dwelling_density,
-           seifa_econ_disadvantage,seifa_econ_adv_disadv,seifa_econ_resources,seifa_education_occupation,
+           #working_age_proportion,
+           senior_citizen_proportion,
+           #confirmed_journeys,
+           public_transport_proportion,
+           #motor_vehicle_proportion,
+           bicycle_walking_proportion,
+           #confirmed_dwellings,
+           #house_and_semi_proportion,
+           unit_proportion,dwelling_density,
+           #seifa_econ_disadvantage,
+           seifa_econ_adv_disadv,seifa_econ_resources,seifa_education_occupation,
            #median_land_value_per_sqm,
            #aria_overall,aria_education,aria_health,aria_shopping,
            #aria_public_transport,aria_financial_postal,
            #annual_turnover
-           )
+    )
   
   scaled_house_data_2006_lm <- as_tibble(scale(house_data_2006_lm))
     
-  house_2006_lm <- lm(data = scaled_house_data_2006_lm,formula = nsw_control_index ~ year + usual_resident_population +
-         working_age_proportion + senior_citizen_proportion + confirmed_journeys + 
-         public_transport_proportion + motor_vehicle_proportion + bicycle_walking_proportion + 
-         confirmed_dwellings + house_and_semi_proportion + unit_proportion + dwelling_density + 
-         seifa_econ_disadvantage + seifa_econ_adv_disadv + seifa_econ_resources + 
-         seifa_education_occupation)
+  house_2006_lm <- lm(data = scaled_house_data_2006_lm,formula = nsw_control_index ~ year + 
+                        usual_resident_population + senior_citizen_proportion +  
+                        public_transport_proportion + bicycle_walking_proportion + 
+                        unit_proportion + dwelling_density + seifa_econ_adv_disadv + 
+                        seifa_econ_resources + seifa_education_occupation)
   
   house_lm <- summary(house_2006_lm)
   
@@ -872,10 +878,17 @@
            #violent_crime,dasg_crime,log_crime_score,
            #education_score,#green_score_decile,
            usual_resident_population,
-           working_age_proportion,senior_citizen_proportion,confirmed_journeys,
-           public_transport_proportion,motor_vehicle_proportion,bicycle_walking_proportion,
-           confirmed_dwellings,house_and_semi_proportion,unit_proportion,dwelling_density,
-           seifa_econ_disadvantage,seifa_econ_adv_disadv,seifa_econ_resources,seifa_education_occupation,
+           #working_age_proportion,
+           senior_citizen_proportion,
+           #confirmed_journeys,
+           public_transport_proportion,
+           #motor_vehicle_proportion,
+           bicycle_walking_proportion,
+           #confirmed_dwellings,
+           #house_and_semi_proportion,
+           unit_proportion,dwelling_density,
+           #seifa_econ_disadvantage,
+           seifa_econ_adv_disadv,seifa_econ_resources,seifa_education_occupation,
            #median_land_value_per_sqm,
            #aria_overall,aria_education,aria_health,aria_shopping,
            #aria_public_transport,aria_financial_postal,
@@ -884,12 +897,11 @@
  
   scaled_unit_data_2006_lm <- as_tibble(scale(unit_data_2006_lm))
   
-  unit_2006_lm <- lm(data = scaled_unit_data_2006_lm,formula = nsw_control_index ~ year + usual_resident_population +
-                        working_age_proportion + senior_citizen_proportion + confirmed_journeys + 
-                        public_transport_proportion + motor_vehicle_proportion + bicycle_walking_proportion + 
-                        confirmed_dwellings + house_and_semi_proportion + unit_proportion + dwelling_density + 
-                        seifa_econ_disadvantage + seifa_econ_adv_disadv + seifa_econ_resources + 
-                        seifa_education_occupation)
+  unit_2006_lm <- lm(data = scaled_unit_data_2006_lm,formula = nsw_control_index ~ year + 
+                       usual_resident_population + senior_citizen_proportion +  
+                       public_transport_proportion + bicycle_walking_proportion + 
+                       unit_proportion + dwelling_density + seifa_econ_adv_disadv + 
+                       seifa_econ_resources + seifa_education_occupation)
   
   unit_lm <- summary(unit_2006_lm)
   
@@ -904,7 +916,28 @@
   
   saveRDS(unit_lm,"rmarkdown/unit_lm.rds")
   
+  test_lm <- lm(data = scaled_house_data_2006_lm,formula = nsw_control_index ~ year + 
+                  usual_resident_population +working_age_proportion + senior_citizen_proportion + confirmed_journeys + 
+                  public_transport_proportion + motor_vehicle_proportion + bicycle_walking_proportion + 
+                  confirmed_dwellings + house_and_semi_proportion + unit_proportion + dwelling_density + 
+                  seifa_education_occupation)
   
+  
+  ### Correlation part
+  
+  library(corrplot)
+  
+  corr_data <- house_data_2006_rf %>%
+    select(6:20)
+  
+  cor_calc <- cor(corr_data,use = "pairwise.complete.obs")
+  
+  saveRDS(cor_calc,"rmarkdown/cor_calc.rds")
+  corrplot(cor_calc, type="upper", order="hclust", tl.col="black", tl.srt=45)
+  
+  corrplot(cor_calc, method="color")
+  
+  summary(test_lm)
   ??cell_spec
   summary(simple_linear_model)
 

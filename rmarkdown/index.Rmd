@@ -13,8 +13,10 @@ I've also been blogging my progress through iLab 2019 on [CICAround](https://16-
 The below table outlines the data sources I accessed and the licenses by which I am using them.
 
 ```{r echo = FALSE,message =FALSE, warning=FALSE}
-
+library(knitr)
+library(kableExtra)
 data_sources <- readRDS("data_sources.rds")
 
-knitr::kable(data_sources)
+kable(data_sources) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"))
 ```
