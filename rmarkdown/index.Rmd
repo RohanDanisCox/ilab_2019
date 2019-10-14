@@ -17,6 +17,6 @@ library(knitr)
 library(kableExtra)
 data_sources <- readRDS("data_sources.rds")
 
-kable(data_sources) %>%
+kable(data_sources, format = "html", escape = F) %>%
   kable_styling(bootstrap_options = c("striped", "hover"))
 ```
