@@ -23,6 +23,8 @@ library(markdown)
     map <- readRDS("data/map.rds")
     
     data_sources <- readRDS("data/data_sources.rds")
+    
+    suburb_choice <- choices %>% distinct(suburb_name) %>% arrange(suburb_name) %>% pull()
 
 # [2] ---- Define UI for application ----
     ui <- navbarPage("Suburb Investigator",
@@ -34,6 +36,8 @@ library(markdown)
                      tabPanel("Investigator",
                               sidebarLayout(
                                   sidebarPanel(
+                                      selectizeInput("foo", label = "test",choices = NULL,
+                                                     multiple = TRUE, options = list(maxItems = 3)),
                                       htmlOutput("sa4_selector"),
                                       htmlOutput("sa3_selector"),
                                       htmlOutput("suburb_selector"),
@@ -51,13 +55,16 @@ library(markdown)
 
 # [3] ---- Define server logic ----
     
-    server <- function(input, output) {
+    server <- function(input, output, session) {
         
         output$intro_table <- renderDataTable(escape = FALSE, data_sources,
                                               options = list(lengthChange = FALSE,
                                                              searching = FALSE,
                                                              paging = FALSE,
                                                              info = FALSE))
+        # trying selectize
+        updateSelectizeInput(session, "foo", choices = suburb_choice, server = TRUE)
+        
         # create reactive input values 
         output$sa4_selector = renderUI({
             selectInput(inputId = "sa4", #name of input
@@ -115,33 +122,36 @@ library(markdown)
         # get the reactive values which will be used in the plots
         
         suburb_plot_data <- reactive({suburb_data %>%
-                filter(suburb_name == input$suburb)})
+                filter(suburb_name == input$foo[[1]] | suburb_name == input$foo[[2]] | suburb_name == input$foo[[3]])
+            })
         
         sa3_plot_data <- reactive({sa3_data %>%
-                filter(sa3_name == input$sa3)})
+                filter(sa3_name == input$sa3)
+            })
         
         sa4_plot_data <- reactive({sa4_data %>%
-                filter(sa4_name == input$sa4)})
+                filter(sa4_name == input$sa4)
+            })
         
         # create the plots
         
         output$plot_1 <- renderPlot({
-            ggplot(suburb_plot_data(),aes(x = year,y = !!as.symbol(input$variable),colour="black")) +
+            ggplot(suburb_plot_data(),aes(x = year,y = !!as.symbol(input$variable), colour = suburb_name)) +
                 geom_line(size = 2) +
-                geom_line(data = sa3_plot_data(),
-                          mapping = aes(x = year,y = !!as.symbol(input$variable), colour = "blue"),
-                          linetype = "dashed") +
-                geom_line(data = sa4_plot_data(),
-                          mapping = aes(x = year,y = !!as.symbol(input$variable), colour = "darkgreen"),
-                          linetype = "dashed") +
+                #geom_line(data = sa3_plot_data(),
+                          #mapping = aes(x = year,y = !!as.symbol(input$variable), colour = "blue"),
+                          #linetype = "dashed") +
+                #geom_line(data = sa4_plot_data(),
+                          #mapping = aes(x = year,y = !!as.symbol(input$variable), colour = "darkgreen"),
+                          #linetype = "dashed") +
                 geom_line(data = nsw_data,
                           mapping = aes(x = year,y = !!as.symbol(input$variable), colour = "red"),
                           linetype = "dashed") +
                 theme_minimal(base_size = 16) +
-                scale_color_identity(name = "Geography",
-                                     breaks = c("black","blue","darkgreen","red"),
-                                     labels = c("Suburb","SA3","SA4","NSW"),
-                                     guide = "legend") + 
+                #scale_color_manual(name = "Geography",
+                                     #breaks = c("black","blue","darkgreen","red"),
+                                     #labels = c("Suburb","SA3","SA4","NSW"),
+                                     #guide = "legend") + 
                 labs(x = "Year", y = as.character(input$variable))
         })
         
