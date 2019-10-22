@@ -38,9 +38,6 @@ library(markdown)
                                   sidebarPanel(
                                       selectizeInput("foo", label = "test",choices = NULL,
                                                      multiple = TRUE, options = list(maxItems = 3)),
-                                      htmlOutput("sa4_selector"),
-                                      htmlOutput("sa3_selector"),
-                                      htmlOutput("suburb_selector"),
                                       htmlOutput("variable_selector"),
                                       withSpinner(plotOutput("plot_3", height = "320px"))
                                       ),
@@ -66,52 +63,7 @@ library(markdown)
         updateSelectizeInput(session, "foo", choices = suburb_choice, server = TRUE)
         
         # create reactive input values 
-        output$sa4_selector = renderUI({
-            selectInput(inputId = "sa4", #name of input
-                        label = "SA4:", #label displayed in UI
-                        choices = list("Greater Sydney" = list("Central Coast",
-                                                               "Sydney - Baulkham Hills and Hawkesbury",
-                                                               "Sydney - Blacktown",
-                                                               "Sydney - City and Inner South",
-                                                               "Sydney - Eastern Suburbs",
-                                                               "Sydney - Inner South West",
-                                                               "Sydney - Inner West",                   
-                                                               "Sydney - North Sydney and Hornsby",
-                                                               "Sydney - Northern Beaches",           
-                                                               "Sydney - Outer South West",
-                                                               "Sydney - Outer West and Blue Mountains",
-                                                               "Sydney - Parramatta",                  
-                                                               "Sydney - Ryde",          
-                                                               "Sydney - South West",
-                                                               "Sydney - Sutherland"),
-                                       "Rest of NSW" = list("Capital Region",
-                                                            "Central West", 
-                                                            "Coffs Harbour - Grafton",
-                                                            "Far West and Orana",
-                                                            "Hunter Valley exc Newcastle",    
-                                                            "Illawarra",                         
-                                                            "Mid North Coast",            
-                                                            "Murray",                          
-                                                            "New England and North West",            
-                                                            "Newcastle and Lake Macquarie",       
-                                                            "Richmond - Tweed",                     
-                                                            "Riverina",                         
-                                                            "Southern Highlands and Shoalhaven")),
-                        selected = 1)
-        })
-        
-        output$sa3_selector = renderUI({
-            selectInput(inputId = "sa3", #name of input
-                        label = "SA3:", #label displayed in UI
-                        choices = choices %>% filter(sa4_name == input$sa4) %>% distinct(sa3_name) %>% arrange(sa3_name),
-                        selected = 1)
-        })
-        output$suburb_selector = renderUI({
-            selectInput(inputId = "suburb",
-                        label = "Suburb:",
-                        choices = choices %>% filter(sa3_name == input$sa3) %>% distinct(suburb_name) %>% arrange(suburb_name),
-                        selected = 1)
-        })
+     
         output$variable_selector = renderUI({
             selectInput(inputId = "variable",
                         label = "Variable:",
@@ -121,8 +73,18 @@ library(markdown)
         
         # get the reactive values which will be used in the plots
         
-        suburb_plot_data <- reactive({suburb_data %>%
-                filter(suburb_name == input$foo[[1]] | suburb_name == input$foo[[2]] | suburb_name == input$foo[[3]])
+        nsw_plot_data <- reactive({nsw_data})
+        
+        suburb_plot_data <- reactive({
+            if(length(input$foo) == 1) {
+                suburb_data %>%filter(suburb_name == input$foo[[1]])
+            }
+            else if(length(input$foo) == 2) {
+                suburb_data %>%filter(suburb_name == input$foo[[1]] | suburb_name == input$foo[[2]])
+            }
+            else if(length(input$foo) == 3) {
+                suburb_data %>%filter(suburb_name == input$foo[[1]] | suburb_name == input$foo[[2]] | suburb_name == input$foo[[3]])
+            }
             })
         
         sa3_plot_data <- reactive({sa3_data %>%
@@ -134,34 +96,49 @@ library(markdown)
             })
         
         # create the plots
+        first_plot <- reactive({
+            if(length(input$foo) < 1) {
+                ggplot(nsw_data,aes(x = year, y = !!as.symbol(input$variable))) + 
+                    geom_line(linetype = "dashed") + 
+                    labs(x = "Year", y = as.character(input$variable))
+            }
+            else if(length(input$foo) >= 1){
+                ggplot(nsw_data,aes(x = year, y = !!as.symbol(input$variable))) + 
+                    geom_line(linetype = "dashed") + 
+                    geom_line(data = suburb_plot_data(),
+                              mapping = aes(x = year,y = !!as.symbol(input$variable), colour = suburb_name)) +
+                    theme_minimal(base_size = 16) +
+                    #scale_color_manual(name = "Geography",
+                    #breaks = c("black","blue","darkgreen","red"),
+                    #labels = c("Suburb","SA3","SA4","NSW"),
+                    #guide = "legend") + 
+                    labs(x = "Year", y = as.character(input$variable))
+                }
+            })
         
-        output$plot_1 <- renderPlot({
-            ggplot(suburb_plot_data(),aes(x = year,y = !!as.symbol(input$variable), colour = suburb_name)) +
-                geom_line(size = 2) +
-                #geom_line(data = sa3_plot_data(),
-                          #mapping = aes(x = year,y = !!as.symbol(input$variable), colour = "blue"),
-                          #linetype = "dashed") +
-                #geom_line(data = sa4_plot_data(),
-                          #mapping = aes(x = year,y = !!as.symbol(input$variable), colour = "darkgreen"),
-                          #linetype = "dashed") +
-                geom_line(data = nsw_data,
-                          mapping = aes(x = year,y = !!as.symbol(input$variable), colour = "red"),
-                          linetype = "dashed") +
-                theme_minimal(base_size = 16) +
-                #scale_color_manual(name = "Geography",
-                                     #breaks = c("black","blue","darkgreen","red"),
-                                     #labels = c("Suburb","SA3","SA4","NSW"),
-                                     #guide = "legend") + 
-                labs(x = "Year", y = as.character(input$variable))
+        second_plot <- reactive({
+            if(length(input$foo) < 1) {
+                ggplot(suburb_data,aes(!!as.symbol(input$variable))) +
+                    geom_density() +
+                    theme_minimal(base_size = 16)
+            }
+            else if(length(input$foo) >= 1){
+                ggplot(suburb_data,aes(!!as.symbol(input$variable))) +
+                    geom_density() +
+                    geom_vline(data = suburb_plot_data(),
+                               aes(xintercept = !!as.symbol(input$variable)), 
+                               color = "#FC4E08", linetype = "dashed", size = 1)+
+                    theme_minimal(base_size = 16)
+            }
         })
         
+
+        output$plot_1 <- renderPlot({
+            first_plot()
+            })
+            
         output$plot_2 <- renderPlot({
-            ggplot(suburb_data,aes(!!as.symbol(input$variable))) +
-                geom_density() +
-                geom_vline(data = suburb_plot_data(),
-                           aes(xintercept = !!as.symbol(input$variable)), 
-                           color = "#FC4E08", linetype = "dashed", size = 1)+
-                theme_minimal(base_size = 16)
+            second_plot()
         })
         
         output$plot_3 <- renderPlot({
