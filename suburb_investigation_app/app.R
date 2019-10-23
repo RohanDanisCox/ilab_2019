@@ -55,6 +55,14 @@
                                 selectizeInput("suburb", label = "Search for up to 3 suburbs:",choices = NULL,
                                                multiple = TRUE, options = list(maxItems = 3)),
                                 htmlOutput("variable_selector"),
+                                br(),
+                                br(),
+                                br(),
+                                br(),
+                                br(),
+                                br(),
+                                br(),
+                                br(),
                                 withSpinner(leafletOutput("plot_3", height = "320px"))
                               ),
                               # Show a plot of the generated distribution
@@ -83,7 +91,16 @@
     output$variable_selector = renderUI({
       selectInput(inputId = "variable",
                   label = "Choose a variable to inspect:",
-                  choices = suburb_data %>% select(8:40) %>% names() %>% str_replace_all("_"," "),
+                  choices = suburb_data %>% 
+                    select(House_Median,Apartment_Median,Usual_Resident_Population,SEIFA_Socio_Economic_Disadvantage,
+                            SEIFA_Socio_Economic_Advantage_Disadvantage,SEIFA_Economic_Resources,SEIFA_Education_and_Occupation,
+                            Dwelling_Density,Annual_Turnover,Median_Land_Value,Median_Land_Value_Per_Sq_M,
+                            Crime,Violent_Crime,DASG_Crime,Education,Green_Decile,Working_Age,
+                            Senior_Citizens,Journey_to_Work_by_Public_Transport,Journey_to_Work_by_Motor_Vehicle,
+                            Journey_to_Work_by_Bicycle_or_Walking,Proportion_of_House,Proportion_of_Units,ARIA_Overall_Services,
+                            ARIA_Education_Services,ARIA_Health_Services,ARIA_Shopping_Services,ARIA_Public_Transport_Services,
+                            ARIA_Financial_Postal_Services) %>% 
+                    names() %>% str_replace_all("_"," "),
                   selected = 1)
     })
     
@@ -101,7 +118,8 @@
           geom_line(linetype = "dashed", size = 1) + 
           theme_minimal(base_size = 16) + 
           labs(x = "Year", y = as.character(input$variable),title = paste0(input$variable," in NSW")) + 
-          scale_colour_manual(name = "", values = c("#000000", "#009E73", "#56B4E9", "#D55E00"))
+          scale_colour_manual(name = "", values = c("#000000", "#009E73", "#56B4E9", "#D55E00")) +
+          scale_y_continuous(labels = comma)
       }
       else if(length(input$suburb) >= 1){
         ggplot(nsw_data,aes(x = year, y = !!as.symbol(y_var), colour = nsw)) + 
@@ -111,7 +129,8 @@
           theme_minimal(base_size = 16) +
           labs(x = "Year", y = as.character(input$variable),
                title = paste0(input$variable," in NSW")) +
-          scale_colour_manual(name = "", values = c("#000000", "#009E73", "#56B4E9", "#D55E00"))
+          scale_colour_manual(name = "", values = c("#000000", "#009E73", "#56B4E9", "#D55E00")) + 
+          scale_y_continuous(labels = comma)
       }
     })
     
@@ -136,7 +155,8 @@
             labs(x = paste0("Log of ",as.character(input$variable)), y = "",
                  title = paste0("Density Plot for ",input$variable," in NSW")) +
             scale_colour_manual(name = "", values = c("#009E73", "#56B4E9", "#D55E00")) +
-            scale_x_continuous(trans='log', labels = comma)
+            scale_x_continuous(trans='log', labels = comma) +
+            guides(colour = guide_legend(override.aes = list(alpha = 1)))
         }
       }
       else{
@@ -158,7 +178,8 @@
             labs(x = as.character(input$variable), y = "",
                  title = paste0("Density Plot for ",input$variable," in NSW")) +
             scale_colour_manual(name = "", values = c("#009E73", "#56B4E9", "#D55E00")) + 
-            scale_x_continuous(labels = comma_format(accuracy = 0.1))
+            scale_x_continuous(labels = comma_format(accuracy = 0.1)) + 
+            guides(colour = guide_legend(override.aes = list(alpha = 1)))
         }
       }
     })
