@@ -64,7 +64,7 @@
         output$variable_selector = renderUI({
             selectInput(inputId = "variable",
                         label = "Choose a variable to inspect:",
-                        choices = suburb_data %>% select(8:40) %>% names(),
+                        choices = suburb_data %>% select(8:40) %>% names() %>% str_replace_all("_"," "),
                         selected = 1)
         })
         
@@ -76,37 +76,40 @@
         
         # create the plots
         first_plot <- reactive({
+            y_var <- input$variable %>% str_replace_all(" ","_")
             if(length(input$suburb) < 1) {
-                ggplot(nsw_data,aes(x = year, y = !!as.symbol(input$variable))) + 
+                ggplot(nsw_data,aes(x = year, y = !!as.symbol(y_var))) + 
                     geom_line(linetype = "dashed", colour = "black", size = 1) + 
-                    labs(x = "Year", y = as.character(input$variable),title = paste0(input$variable," in NSW"))
+                    labs(x = "Year", y = as.character(input$variable),title = paste0(input$variable," in NSW")) + 
+                    theme_minimal(base_size = 16)
             }
             else if(length(input$suburb) >= 1){
-                ggplot(nsw_data,aes(x = year, y = !!as.symbol(input$variable), colour = "NSW")) + 
+                ggplot(nsw_data,aes(x = year, y = !!as.symbol(y_var), colour = "NSW")) + 
                     geom_line(linetype = "dashed", colour = "black", size = 1) + 
                     geom_line(data = suburb_plot_data(),
-                              mapping = aes(x = year,y = !!as.symbol(input$variable), colour = suburb_name), size = 1) +
+                              mapping = aes(x = year,y = !!as.symbol(y_var), colour = suburb_name), size = 1) +
                     theme_minimal(base_size = 16) +
                     #scale_color_manual(name = "Geography",
                     #breaks = c("black","blue","darkgreen","red"),
                     #labels = c("Suburb","SA3","SA4","NSW"),
                     #guide = "legend") + 
                     labs(x = "Year", y = as.character(input$variable), colour = "Suburb",
-                         title = paste0(input$variable," in NSW"))
+                         title = paste0(input$variable," in NSW")) 
                 }
             })
         
         second_plot <- reactive({
+            y_var <- input$variable %>% str_replace_all(" ","_")
             if(length(input$suburb) < 1) {
-                ggplot(suburb_data,aes(!!as.symbol(input$variable))) +
+                ggplot(suburb_data,aes(!!as.symbol(y_var))) +
                     geom_density() +
                     theme_minimal(base_size = 16)
             }
             else if(length(input$suburb) >= 1){
-                ggplot(suburb_data,aes(!!as.symbol(input$variable))) +
+                ggplot(suburb_data,aes(!!as.symbol(y_var))) +
                     geom_density() +
                     geom_vline(data = suburb_plot_data(),
-                               aes(xintercept = !!as.symbol(input$variable), colour = suburb_name), 
+                               aes(xintercept = !!as.symbol(y_var), colour = suburb_name), 
                                linetype = "dashed", size = 1, alpha = 0.5)+
                     theme_minimal(base_size = 16)
             }
