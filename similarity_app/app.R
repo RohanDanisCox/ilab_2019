@@ -3,156 +3,157 @@
 #
 
 # [0] ---- Load packages ----
-library(shiny)
-library(sf)
-library(leaflet)
-library(leafpop)
-library(rgdal)
-library(dplyr)
-library(ggplot2)
-library(shinycssloaders)
-library(markdown)
-library(RColorBrewer)
-library(pdist)
-library(shinyjs)
+    library(shiny)
+    library(sf)
+    library(leaflet)
+    library(leafpop)
+    library(rgdal)
+    library(dplyr)
+    library(ggplot2)
+    library(shinycssloaders)
+    library(markdown)
+    library(RColorBrewer)
+    library(pdist)
+    library(shinyjs)
 
 # [1] ---- Load global data ----
 
-map <- readRDS("data/simple_map.rds")
-
-choices <- readRDS("data/choices.rds")
-
-select_scaled_data <- readRDS("data/select_scaled_data.rds") %>%
-    select(suburb_name,sa2_name,sa3_name,sa4_name,suburb_area_sqkm,log_crime_score,education_score,green_score_decile,
-           usual_resident_population,working_age_proportion,senior_citizen_proportion,
-           public_transport_proportion,motor_vehicle_proportion,bicycle_walking_proportion,
-           house_and_semi_proportion,unit_proportion,dwelling_density,
-           seifa_econ_disadvantage,seifa_econ_adv_disadv,
-           seifa_econ_resources,seifa_education_occupation,
-           median_land_value_per_sqm,house_median_suburb,apartment_median_suburb)              ##### NEED TO REMOVE THIS LATER
-
-select_scaler <- readRDS("data/select_scaling_data.rds") %>%
-    filter(variable %in% c("suburb_area_sqkm","log_crime_score","education_score","green_score_decile",
-                           "usual_resident_population","working_age_proportion","senior_citizen_proportion",
-                           "public_transport_proportion","motor_vehicle_proportion","bicycle_walking_proportion",
-                           "house_and_semi_proportion","unit_proportion","dwelling_density",
-                           "seifa_econ_disadvantage","seifa_econ_adv_disadv",
-                           "seifa_econ_resources","seifa_education_occupation",
-                           "median_land_value_per_sqm","house_median_suburb","apartment_median_suburb")) ##### NEED TO REMOVE THIS LATER
-
-comparison_scaled_data <- readRDS("data/comparison_scaled_data.rds") %>%
-    select(suburb_name,sa2_name,sa3_name,sa4_name,year,suburb_area_sqkm,log_crime_score,education_score,green_score_decile,
-           usual_resident_population,working_age_proportion,senior_citizen_proportion,
-           public_transport_proportion,motor_vehicle_proportion,bicycle_walking_proportion,
-           house_and_semi_proportion,unit_proportion,dwelling_density,
-           seifa_econ_disadvantage,seifa_econ_adv_disadv,
-           seifa_econ_resources,seifa_education_occupation,
-           median_land_value_per_sqm,house_median_suburb,apartment_median_suburb)               ##### NEED TO REMOVE THIS LATER
-
-comparison_scaler <- readRDS("data/comparison_scaling_data.rds") %>%
-    filter(variable %in% c("suburb_area_sqkm","log_crime_score","education_score","green_score_decile",
-                           "usual_resident_population","working_age_proportion","senior_citizen_proportion",
-                           "public_transport_proportion","motor_vehicle_proportion","bicycle_walking_proportion",
-                           "house_and_semi_proportion","unit_proportion","dwelling_density",
-                           "seifa_econ_disadvantage","seifa_econ_adv_disadv",
-                           "seifa_econ_resources","seifa_education_occupation",
-                           "median_land_value_per_sqm","house_median_suburb","apartment_median_suburb")) ##### NEED TO REMOVE THIS LATER
-
-data <- map %>%
-    st_drop_geometry()
-
-data_sources <- readRDS("data/data_sources.rds")
+    map <- readRDS("data/simple_map.rds")
+    
+    choices <- readRDS("data/choices.rds")
+    
+    suburb_choice <- choices %>% distinct(suburb_name) %>% arrange(suburb_name) %>% pull()
+    
+    select_scaled_data <- readRDS("data/select_scaled_data.rds") %>%
+        select(suburb_name,sa2_name,sa3_name,sa4_name,suburb_area_sqkm,log_crime_score,education_score,green_score_decile,
+               usual_resident_population,working_age_proportion,senior_citizen_proportion,
+               public_transport_proportion,motor_vehicle_proportion,bicycle_walking_proportion,
+               house_and_semi_proportion,unit_proportion,dwelling_density,
+               seifa_econ_disadvantage,seifa_econ_adv_disadv,
+               seifa_econ_resources,seifa_education_occupation,
+               median_land_value_per_sqm,house_median_suburb,apartment_median_suburb)              ##### NEED TO REMOVE THIS LATER
+    
+    select_scaler <- readRDS("data/select_scaling_data.rds") %>%
+        filter(variable %in% c("suburb_area_sqkm","log_crime_score","education_score","green_score_decile",
+                               "usual_resident_population","working_age_proportion","senior_citizen_proportion",
+                               "public_transport_proportion","motor_vehicle_proportion","bicycle_walking_proportion",
+                               "house_and_semi_proportion","unit_proportion","dwelling_density",
+                               "seifa_econ_disadvantage","seifa_econ_adv_disadv",
+                               "seifa_econ_resources","seifa_education_occupation",
+                               "median_land_value_per_sqm","house_median_suburb","apartment_median_suburb")) ##### NEED TO REMOVE THIS LATER
+    
+    comparison_scaled_data <- readRDS("data/comparison_scaled_data.rds") %>%
+        select(suburb_name,sa2_name,sa3_name,sa4_name,year,suburb_area_sqkm,log_crime_score,education_score,green_score_decile,
+               usual_resident_population,working_age_proportion,senior_citizen_proportion,
+               public_transport_proportion,motor_vehicle_proportion,bicycle_walking_proportion,
+               house_and_semi_proportion,unit_proportion,dwelling_density,
+               seifa_econ_disadvantage,seifa_econ_adv_disadv,
+               seifa_econ_resources,seifa_education_occupation,
+               median_land_value_per_sqm,house_median_suburb,apartment_median_suburb)               ##### NEED TO REMOVE THIS LATER
+    
+    comparison_scaler <- readRDS("data/comparison_scaling_data.rds") %>%
+        filter(variable %in% c("suburb_area_sqkm","log_crime_score","education_score","green_score_decile",
+                               "usual_resident_population","working_age_proportion","senior_citizen_proportion",
+                               "public_transport_proportion","motor_vehicle_proportion","bicycle_walking_proportion",
+                               "house_and_semi_proportion","unit_proportion","dwelling_density",
+                               "seifa_econ_disadvantage","seifa_econ_adv_disadv",
+                               "seifa_econ_resources","seifa_education_occupation",
+                               "median_land_value_per_sqm","house_median_suburb","apartment_median_suburb")) ##### NEED TO REMOVE THIS LATER
+    
+    data <- map %>%
+        st_drop_geometry()
+    
+    data_sources <- readRDS("data/data_sources.rds")
 
 ## Function to calculate similarity despite NA's
-rdist_na <- function(X,Y){
-    if (!is.matrix(X)) 
-        X = as.matrix(X)
-    if (!is.matrix(Y)) 
-        Y = as.matrix(Y)
-    distances <- matrix(pdist(X,Y)@dist, ncol=nrow(X), byrow = TRUE)
-    #count NAs
-    na.count <- sapply(1:nrow(X),function(i){rowSums(is.na(Y) | is.na(X[i,]))})
-    #scaling to number of cols
-    distances * sqrt(ncol(X)/(ncol(X) - na.count))
-}
+    rdist_na <- function(X,Y){
+        if (!is.matrix(X)) 
+            X = as.matrix(X)
+        if (!is.matrix(Y)) 
+            Y = as.matrix(Y)
+        distances <- matrix(pdist(X,Y)@dist, ncol=nrow(X), byrow = TRUE)
+        #count NAs
+        na.count <- sapply(1:nrow(X),function(i){rowSums(is.na(Y) | is.na(X[i,]))})
+        #scaling to number of cols
+        distances * sqrt(ncol(X)/(ncol(X) - na.count))
+    }
 
 #pal_similarity <- colorNumeric(palette = c("white","darkred"),domain = data$similarity_score)
 
 # [2] ---- Define UI ----
 
-ui <- navbarPage("Suburb Similarity",
-                 tabPanel("Introduction",
-                          titlePanel("Welcome to the Suburb Similarity Application"),
-                          fluidRow(column(10, offset = 1,
-                                          includeMarkdown("data/markdown.Rmd"),
-                                          dataTableOutput("intro_table")))
-                 ),
-                 tabPanel("Compare to Selection",
-                          sidebarLayout(
-                              sidebarPanel(
-                                  shinyjs::useShinyjs(),
-                                  id = "side-panel",
-                                  htmlOutput("calculate", inline = TRUE),
-                                  htmlOutput("reset", inline = TRUE),
-                                  htmlOutput("number"),
-                                  htmlOutput("size"),
-                                  htmlOutput("crime"),
-                                  htmlOutput("education"),
-                                  htmlOutput("green"),
-                                  htmlOutput("population"),
-                                  htmlOutput("working"),
-                                  htmlOutput("seniors"),
-                                  htmlOutput("public_transport"),
-                                  htmlOutput("motor_vehicle"),
-                                  htmlOutput("bicycle_walking"),
-                                  htmlOutput("house"),
-                                  htmlOutput("unit"),
-                                  htmlOutput("density"),
-                                  htmlOutput("seifa_1"),
-                                  htmlOutput("seifa_2"),
-                                  htmlOutput("seifa_3"),
-                                  htmlOutput("seifa_4"),
-                                  htmlOutput("land_sqm"),
-                                  htmlOutput("house_median"),
-                                  htmlOutput("unit_median")
-                              ),
-                              # Show a plot of the generated distribution
-                              mainPanel(
-                                  withSpinner(leafletOutput(outputId = 'map_1', height = 600)),
-                                  withSpinner(dataTableOutput(outputId = 'table_1'))
+    ui <- navbarPage("Suburb Similarity",
+                     tabPanel("Introduction",
+                              titlePanel("Welcome to the Suburb Similarity Application"),
+                              fluidRow(column(10, offset = 1,
+                                              includeMarkdown("data/markdown.Rmd"),
+                                              dataTableOutput("intro_table")))
+                     ),
+                     tabPanel("Compare to Selection",
+                              sidebarLayout(
+                                  sidebarPanel(
+                                      shinyjs::useShinyjs(),
+                                      id = "side-panel",
+                                      htmlOutput("calculate", inline = TRUE),
+                                      htmlOutput("reset", inline = TRUE),
+                                      htmlOutput("number"),
+                                      htmlOutput("size"),
+                                      htmlOutput("crime"),
+                                      htmlOutput("education"),
+                                      htmlOutput("green"),
+                                      htmlOutput("population"),
+                                      htmlOutput("working"),
+                                      htmlOutput("seniors"),
+                                      htmlOutput("public_transport"),
+                                      htmlOutput("motor_vehicle"),
+                                      htmlOutput("bicycle_walking"),
+                                      htmlOutput("house"),
+                                      htmlOutput("unit"),
+                                      htmlOutput("density"),
+                                      htmlOutput("seifa_1"),
+                                      htmlOutput("seifa_2"),
+                                      htmlOutput("seifa_3"),
+                                      htmlOutput("seifa_4"),
+                                      htmlOutput("land_sqm"),
+                                      htmlOutput("house_median"),
+                                      htmlOutput("unit_median")
+                                  ),
+                                  # Show a plot of the generated distribution
+                                  mainPanel(
+                                      withSpinner(leafletOutput(outputId = 'map_1', height = 600)),
+                                      withSpinner(dataTableOutput(outputId = 'table_1'))
+                                  )
                               )
-                          )
-                 ),
-                 tabPanel("Compare to Suburbs",
-                          sidebarLayout(
-                              sidebarPanel(htmlOutput("calculate_2"),
-                                           htmlOutput("year"),
-                                           htmlOutput("sa4_selector"),
-                                           htmlOutput("sa3_selector"),
-                                           htmlOutput("suburb"),
-                                           htmlOutput("number_2")
-                              ),
-                              # Show a plot of the generated distribution
-                              mainPanel(
-                                  withSpinner(leafletOutput(outputId = 'map_2', height = 600)),
-                                  withSpinner(dataTableOutput(outputId = 'table_2'))
+                     ),
+                     tabPanel("Compare to Suburbs",
+                              sidebarLayout(
+                                  sidebarPanel(htmlOutput("calculate_2"),
+                                               htmlOutput("year"),
+                                               selectizeInput("suburb", label = "Search for a suburb:",choices = NULL),
+                                               htmlOutput("number_2")
+                                  ),
+                                  # Show a plot of the generated distribution
+                                  mainPanel(
+                                      withSpinner(leafletOutput(outputId = 'map_2', height = 600)),
+                                      withSpinner(dataTableOutput(outputId = 'table_2'))
+                                  )
+                                  )
                               )
-                              )
-                          )
-                 )
-
+                     )
+    
 # [2] ---- Define Server ----
-server <- function(input, output) {
+    
+    server <- function(input, output, session) {
 
-    ### Build the table to include in the introduction page
-    
-    output$intro_table <- renderDataTable(escape = FALSE, data_sources,
-                                          options = list(lengthChange = FALSE,
-                                                         searching = FALSE,
-                                                         paging = FALSE,
-                                                         info = FALSE))
-    
-    #### Establish the Reactive UI components for the 'Select' tab
+# [2a] ---- Intro Page ----
+        
+        output$intro_table <- renderDataTable(escape = FALSE, data_sources,
+                                              options = list(lengthChange = FALSE,
+                                                             searching = FALSE,
+                                                             paging = FALSE,
+                                                             info = FALSE))
+        
+# [2c] ---- Establish the Reactive UI components for the 'Select' tab ----
     
     output$calculate = renderUI({
         actionButton(inputId = "calculate", label = "Calculate Similarity")
@@ -309,7 +310,7 @@ server <- function(input, output) {
                     value = select_scaler %>% filter(variable == "apartment_median_suburb") %>% select(mean) %>% pull())
     })
     
-    #### Establish the Reactive UI components for the 'Suburb' tab      
+# [2b] ---- Establish the Reactive UI components for the 'Suburb' tab ----    
     
     output$calculate_2 = renderUI({
         actionButton(inputId = "calculate_2", label = "Calculate Similarity")
@@ -321,59 +322,16 @@ server <- function(input, output) {
                     max = 1000,
                     value = 10)
     })
-    output$sa4_selector = renderUI({
-        selectInput(inputId = "sa4", 
-                    label = "SA4:", 
-                    choices = list("Greater Sydney" = list("Central Coast",
-                                                           "Sydney - Baulkham Hills and Hawkesbury",
-                                                           "Sydney - Blacktown",
-                                                           "Sydney - City and Inner South",
-                                                           "Sydney - Eastern Suburbs",
-                                                           "Sydney - Inner South West",
-                                                           "Sydney - Inner West",                   
-                                                           "Sydney - North Sydney and Hornsby",
-                                                           "Sydney - Northern Beaches",           
-                                                           "Sydney - Outer South West",
-                                                           "Sydney - Outer West and Blue Mountains",
-                                                           "Sydney - Parramatta",                  
-                                                           "Sydney - Ryde",          
-                                                           "Sydney - South West",
-                                                           "Sydney - Sutherland"),
-                                   "Rest of NSW" = list("Capital Region",
-                                                        "Central West", 
-                                                        "Coffs Harbour - Grafton",
-                                                        "Far West and Orana",
-                                                        "Hunter Valley exc Newcastle",
-                                                        "Illawarra",
-                                                        "Mid North Coast",
-                                                        "Murray",
-                                                        "New England and North West",
-                                                        "Newcastle and Lake Macquarie",
-                                                        "Richmond - Tweed",
-                                                        "Riverina",
-                                                        "Southern Highlands and Shoalhaven")),
+    updateSelectizeInput(session, "suburb", choices = suburb_choice, server = TRUE)
+    
+    output$year = renderUI({
+        selectInput(inputId = "year",
+                    label = "Year:",
+                    choices = c(2019,2018,2017,2016,2015,2014,2013,2012,2011,2010,2009,2008,2007,2006),
                     selected = 1)
-        })
-        output$sa3_selector = renderUI({
-            selectInput(inputId = "sa3", #name of input
-                        label = "SA3:", #label displayed in UI
-                        choices = choices %>% filter(sa4_name == input$sa4) %>% distinct(sa3_name) %>% arrange(sa3_name),
-                        selected = 1)
-        })
-        output$suburb = renderUI({
-            selectInput(inputId = "suburb",
-                        label = "Suburb:",
-                        choices = choices %>% filter(sa3_name == input$sa3) %>% distinct(suburb_name) %>% arrange(suburb_name),
-                        selected = 1)
-        })
-        output$year = renderUI({
-            selectInput(inputId = "year",
-                        label = "Year:",
-                        choices = c(2019,2018,2017,2016,2015,2014,2013,2012,2011,2010,2009,2008,2007,2006),
-                        selected = 1)
-        })                               
+    })                               
                              
-    ##### Calculate the Similarity scores tab
+# [2d] ---- Calculate the Similarity scores tab ----
     
     observeEvent(input$reset, {
         shinyjs::reset("side-panel")
@@ -453,7 +411,7 @@ server <- function(input, output) {
                         popup = leafpop::popupTable(map_small,  zcol = c(2,8,11:16,18:20,22:28,30,37,38,42),feature.id = FALSE, row.numbers = FALSE))
     })
     
-    ##### Calculate the Suburb Similarity Tab
+# [2e] ---- Calculate the Suburb Similarity Tab ----
      
     chosen_suburb <- eventReactive(input$calculate_2,{
         scaled_values <- comparison_scaled_data %>%

@@ -30,16 +30,6 @@
   log_var <- c("House_Median","Apartment_Median","Usual_Resident_Population",
                "Dwelling_Density","Annual_Turnover","Median_Land_Value","Median_Land_Value_Per_Sq_M",
                "Violent_Crime","DASG_Crime")
-  
-  order <- c("House_Median","Apartment_Median","Usual_Resident_Population","SEIFA_Socio_Economic_Disadvantage",
-             "SEIFA_Socio_Economic_Advantage_Disadvantage","SEIFA_Economic_Resources","SEIFA_Education_and_Occupation",
-             "Dwelling_Density","Annual_Turnover","Median_Land_Value","Median_Land_Value_Per_Sq_M",
-             "Crime","Violent_Crime","DASG_Crime","Education","Green_Decile","Working_Age",
-             "Senior_Citizens","Journey_to_Work_by_Public_Transport","Journey_to_Work_by_Motor_Vehicle",
-             "Journey_to_Work_by_Bicycle_or_Walking","Proportion_of_House","Proportion_of_Units","ARIA_Overall_Services",
-             "ARIA_Education_Services","ARIA_Health_Services","ARIA_Shopping_Services","ARIA_Public_Transport_Services",
-             "ARIA_Financial_Postal_Services")
-
 
 # [2] ---- Define UI for application ----
   
@@ -217,8 +207,6 @@
           filter(suburb_name == input$suburb[[3]]) %>%
           st_centroid(geometry)
       }     
-      top <- map_subset %>%
-        st_centroid(geometry)
       
       top_lat <- top$geometry[[1]][1]
       top_lng <- top$geometry[[1]][2]
