@@ -9,11 +9,13 @@
     library(markdown)
     library(leaflet)
     library(leafpop)
+    library(stringr)
 
 # [1] ---- Load global data ----
     suburb_data <- readRDS("data/suburb_data.rds")
     
-    nsw_data <- readRDS("data/nsw_data.rds")
+    nsw_data <- readRDS("data/nsw_data.rds") %>%
+        mutate(nsw = "-- NSW --")
     
     choices <- readRDS("data/choices.rds")
     
@@ -78,23 +80,21 @@
         first_plot <- reactive({
             y_var <- input$variable %>% str_replace_all(" ","_")
             if(length(input$suburb) < 1) {
-                ggplot(nsw_data,aes(x = year, y = !!as.symbol(y_var))) + 
-                    geom_line(linetype = "dashed", colour = "black", size = 1) + 
-                    labs(x = "Year", y = as.character(input$variable),title = paste0(input$variable," in NSW")) + 
-                    theme_minimal(base_size = 16)
+                ggplot(nsw_data,aes(x = year, y = !!as.symbol(y_var), colour = nsw)) + 
+                    geom_line(linetype = "dashed", size = 1) + 
+                    theme_minimal(base_size = 16) + 
+                    labs(x = "Year", y = as.character(input$variable),title = paste0(input$variable," in NSW")) +
+                    scale_colour_manual(name = "", values = c("#000000", "#009E73", "#0072B2", "#D55E00"))
             }
             else if(length(input$suburb) >= 1){
-                ggplot(nsw_data,aes(x = year, y = !!as.symbol(y_var), colour = "NSW")) + 
-                    geom_line(linetype = "dashed", colour = "black", size = 1) + 
+                ggplot(nsw_data,aes(x = year, y = !!as.symbol(y_var), colour = nsw)) + 
+                    geom_line(linetype = "dashed", size = 1) + 
                     geom_line(data = suburb_plot_data(),
                               mapping = aes(x = year,y = !!as.symbol(y_var), colour = suburb_name), size = 1) +
                     theme_minimal(base_size = 16) +
-                    #scale_color_manual(name = "Geography",
-                    #breaks = c("black","blue","darkgreen","red"),
-                    #labels = c("Suburb","SA3","SA4","NSW"),
-                    #guide = "legend") + 
                     labs(x = "Year", y = as.character(input$variable), colour = "Suburb",
-                         title = paste0(input$variable," in NSW")) 
+                         title = paste0(input$variable," in NSW")) +
+                    scale_colour_manual(name = "", values = c("#000000", "#009E73", "#0072B2", "#D55E00"))
                 }
             })
         
@@ -103,7 +103,9 @@
             if(length(input$suburb) < 1) {
                 ggplot(suburb_data,aes(!!as.symbol(y_var))) +
                     geom_density() +
-                    theme_minimal(base_size = 16)
+                    theme_minimal(base_size = 16) + 
+                    labs(x = as.character(input$variable), y = "",
+                        title = paste0("Density Plot for ",input$variable," in NSW"))
             }
             else if(length(input$suburb) >= 1){
                 ggplot(suburb_data,aes(!!as.symbol(y_var))) +
@@ -111,7 +113,10 @@
                     geom_vline(data = suburb_plot_data(),
                                aes(xintercept = !!as.symbol(y_var), colour = suburb_name), 
                                linetype = "dashed", size = 1, alpha = 0.5)+
-                    theme_minimal(base_size = 16)
+                    theme_minimal(base_size = 16) + 
+                    labs(x = as.character(input$variable), y = "",
+                        title = paste0("Density Plot for ",input$variable," in NSW")) + 
+                    scale_colour_manual(name = "", values = c("#009E73", "#0072B2", "#D55E00"))
             }
         })
         
