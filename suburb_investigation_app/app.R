@@ -1,4 +1,4 @@
-# Suburb Investigator
+# Suburb Investigation
 
 # [0] ---- Load packages ----
   library(shiny)
@@ -30,12 +30,18 @@
   log_var <- c("House_Median","Apartment_Median","Usual_Resident_Population",
                "Dwelling_Density","Annual_Turnover","Median_Land_Value","Median_Land_Value_Per_Sq_M",
                "Violent_Crime","DASG_Crime")
+  
+  small_var <-c("Crime","Education", "Green_Decile","Working_Age",
+                "Senior_Citizens","Journey_to_Work_by_Public_Transport","Journey_to_Work_by_Motor_Vehicle",
+                "Journey_to_Work_by_Bicycle_or_Walking","Proportion_of_House","Proportion_of_Units","ARIA_Overall_Services",
+                "ARIA_Education_Services","ARIA_Health_Services","ARIA_Shopping_Services","ARIA_Public_Transport_Services",
+                "ARIA_Financial_Postal_Services")
 
 # [2] ---- Define UI for application ----
   
-  ui <- navbarPage("Suburb Investigator",
+  ui <- navbarPage("Suburb Investigation",
                    tabPanel("Introduction",
-                            titlePanel("Welcome to the Suburb Investigator"),
+                            titlePanel("Investigting Suburbs in NSW"),
                             fluidRow(column(10, offset = 1,
                                             includeMarkdown("data/markdown.Rmd"),
                                             dataTableOutput("intro_table")))),
@@ -103,24 +109,47 @@
     # create the plots
     first_plot <- reactive({
       y_var <- input$variable %>% str_replace_all(" ","_")
-      if(length(input$suburb) < 1) {
-        ggplot(nsw_data,aes(x = year, y = !!as.symbol(y_var), colour = nsw)) + 
-          geom_line(linetype = "dashed", size = 1) + 
-          theme_minimal(base_size = 16) + 
-          labs(x = "Year", y = as.character(input$variable),title = paste0(input$variable," in NSW")) + 
-          scale_colour_manual(name = "", values = c("#000000", "#009E73", "#56B4E9", "#D55E00")) +
-          scale_y_continuous(labels = comma)
+      if(y_var %in% small_var) {
+        if(length(input$suburb) < 1) {
+          ggplot(nsw_data,aes(x = year, y = !!as.symbol(y_var), colour = nsw)) + 
+            geom_line(linetype = "dashed", size = 1) + 
+            theme_minimal(base_size = 16) + 
+            labs(x = "Year", y = as.character(input$variable),title = paste0(input$variable," in NSW")) + 
+            scale_colour_manual(name = "", values = c("#000000", "#009E73", "#56B4E9", "#D55E00")) +
+            scale_y_continuous(labels = comma_format(accuracy = 0.1))
+        }
+        else if(length(input$suburb) >= 1){
+          ggplot(nsw_data,aes(x = year, y = !!as.symbol(y_var), colour = nsw)) + 
+            geom_line(linetype = "dashed", size = 1) + 
+            geom_line(data = suburb_plot_data(),
+                      mapping = aes(x = year,y = !!as.symbol(y_var), colour = suburb_name), size = 1) +
+            theme_minimal(base_size = 16) +
+            labs(x = "Year", y = as.character(input$variable),
+                title = paste0(input$variable," in NSW")) +
+            scale_colour_manual(name = "", values = c("#000000", "#009E73", "#56B4E9", "#D55E00")) + 
+            scale_y_continuous(labels = comma_format(accuracy = 0.1))
+        }
       }
-      else if(length(input$suburb) >= 1){
-        ggplot(nsw_data,aes(x = year, y = !!as.symbol(y_var), colour = nsw)) + 
-          geom_line(linetype = "dashed", size = 1) + 
-          geom_line(data = suburb_plot_data(),
-                    mapping = aes(x = year,y = !!as.symbol(y_var), colour = suburb_name), size = 1) +
-          theme_minimal(base_size = 16) +
-          labs(x = "Year", y = as.character(input$variable),
-               title = paste0(input$variable," in NSW")) +
-          scale_colour_manual(name = "", values = c("#000000", "#009E73", "#56B4E9", "#D55E00")) + 
-          scale_y_continuous(labels = comma)
+      else {
+        if(length(input$suburb) < 1) {
+          ggplot(nsw_data,aes(x = year, y = !!as.symbol(y_var), colour = nsw)) + 
+            geom_line(linetype = "dashed", size = 1) + 
+            theme_minimal(base_size = 16) + 
+            labs(x = "Year", y = as.character(input$variable),title = paste0(input$variable," in NSW")) + 
+            scale_colour_manual(name = "", values = c("#000000", "#009E73", "#56B4E9", "#D55E00")) +
+            scale_y_continuous(labels = comma)
+        }
+        else if(length(input$suburb) >= 1){
+          ggplot(nsw_data,aes(x = year, y = !!as.symbol(y_var), colour = nsw)) + 
+            geom_line(linetype = "dashed", size = 1) + 
+            geom_line(data = suburb_plot_data(),
+                      mapping = aes(x = year,y = !!as.symbol(y_var), colour = suburb_name), size = 1) +
+            theme_minimal(base_size = 16) +
+            labs(x = "Year", y = as.character(input$variable),
+                 title = paste0(input$variable," in NSW")) +
+            scale_colour_manual(name = "", values = c("#000000", "#009E73", "#56B4E9", "#D55E00")) + 
+            scale_y_continuous(labels = comma)
+        }
       }
     })
     
