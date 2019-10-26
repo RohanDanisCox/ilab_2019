@@ -13,7 +13,7 @@ The display includes:
 
 * An interactive map showing each of the suburbs selected, highlighted in red.
 
-* A line graph showing the change over time in the selected variable
+* A line graph showing the change over time in the selected variable.
 
 * A density graph showing the full distribution for the selected variable across NSW. The vertical lines indicate years of the selected suburb within that distribution.
 

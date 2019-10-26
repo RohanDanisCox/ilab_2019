@@ -11,6 +11,7 @@
   library(leafpop)
   library(stringr)
   library(scales)
+  library(purrr)
 
 # [1] ---- Load global data ----
 
@@ -27,13 +28,13 @@
   
   suburb_choice <- choices %>% distinct(suburb_name) %>% arrange(suburb_name) %>% pull()
   
-  log_var <- c("House_Median","Apartment_Median","Usual_Resident_Population",
+  log_var <- c("Median_House_Price","Median_Apartment_Price","Usual_Resident_Population",
                "Dwelling_Density","Annual_Turnover","Median_Land_Value","Median_Land_Value_Per_Sq_M",
                "Violent_Crime","DASG_Crime")
   
   small_var <-c("Crime","Education", "Green_Decile","Working_Age",
                 "Senior_Citizens","Journey_to_Work_by_Public_Transport","Journey_to_Work_by_Motor_Vehicle",
-                "Journey_to_Work_by_Bicycle_or_Walking","Proportion_of_House","Proportion_of_Units","ARIA_Overall_Services",
+                "Journey_to_Work_by_Bicycle_or_Walking","Proportion_of_Houses","Proportion_of_Units","ARIA_Overall_Services",
                 "ARIA_Education_Services","ARIA_Health_Services","ARIA_Shopping_Services","ARIA_Public_Transport_Services",
                 "ARIA_Financial_Postal_Services")
 
@@ -41,11 +42,11 @@
   
   ui <- navbarPage("Suburb Investigation",
                    tabPanel("Introduction",
-                            titlePanel("Investigting Suburbs in NSW"),
+                            titlePanel("Investigating Suburbs in NSW"),
                             fluidRow(column(10, offset = 1,
                                             includeMarkdown("data/markdown.Rmd"),
                                             dataTableOutput("intro_table")))),
-                   tabPanel("Investigator",
+                   tabPanel("Investigate",
                             sidebarLayout(
                               sidebarPanel(
                                 selectizeInput("suburb", label = "Search for up to 3 suburbs:",choices = NULL,
@@ -88,12 +89,12 @@
       selectInput(inputId = "variable",
                   label = "Choose a variable to inspect:",
                   choices = suburb_data %>% 
-                    select(House_Median,Apartment_Median,Usual_Resident_Population,SEIFA_Socio_Economic_Disadvantage,
+                    select(Median_House_Price,Median_Apartment_Price,Usual_Resident_Population,SEIFA_Socio_Economic_Disadvantage,
                             SEIFA_Socio_Economic_Advantage_Disadvantage,SEIFA_Economic_Resources,SEIFA_Education_and_Occupation,
                             Dwelling_Density,Annual_Turnover,Median_Land_Value,Median_Land_Value_Per_Sq_M,
                             Crime,Violent_Crime,DASG_Crime,Education,Green_Decile,Working_Age,
                             Senior_Citizens,Journey_to_Work_by_Public_Transport,Journey_to_Work_by_Motor_Vehicle,
-                            Journey_to_Work_by_Bicycle_or_Walking,Proportion_of_House,Proportion_of_Units,ARIA_Overall_Services,
+                            Journey_to_Work_by_Bicycle_or_Walking,Proportion_of_Houses,Proportion_of_Units,ARIA_Overall_Services,
                             ARIA_Education_Services,ARIA_Health_Services,ARIA_Shopping_Services,ARIA_Public_Transport_Services,
                             ARIA_Financial_Postal_Services) %>% 
                     names() %>% str_replace_all("_"," "),
@@ -116,7 +117,7 @@
             theme_minimal(base_size = 16) + 
             labs(x = "Year", y = as.character(input$variable),title = paste0(input$variable," in NSW")) + 
             scale_colour_manual(name = "", values = c("#000000", "#009E73", "#56B4E9", "#D55E00")) +
-            scale_y_continuous(labels = comma_format(accuracy = 0.1))
+            scale_y_continuous(labels = comma_format(accuracy = 0.01))
         }
         else if(length(input$suburb) >= 1){
           ggplot(nsw_data,aes(x = year, y = !!as.symbol(y_var), colour = nsw)) + 
@@ -127,7 +128,7 @@
             labs(x = "Year", y = as.character(input$variable),
                 title = paste0(input$variable," in NSW")) +
             scale_colour_manual(name = "", values = c("#000000", "#009E73", "#56B4E9", "#D55E00")) + 
-            scale_y_continuous(labels = comma_format(accuracy = 0.1))
+            scale_y_continuous(labels = comma_format(accuracy = 0.01))
         }
       }
       else {
@@ -220,35 +221,45 @@
     observeEvent(input$suburb,{
       map_subset <- map %>%
         filter(suburb_name %in% input$suburb)
+      map_presentation <- map_subset %>%
+          set_names(~ str_replace_all(.,"_"," ") %>%
+                        str_to_title()) %>%
+          rename(geometry = Geometry)
       
-      if(length(input$suburb == 1)) {
-        top <- map_subset %>%
-          filter(suburb_name == input$suburb[[1]]) %>%
-          st_centroid(geometry)
-      }
-      else if(length(input$suburb == 2)) {
-        top <- map_subset %>%
-          filter(suburb_name == input$suburb[[2]]) %>%
-          st_centroid(geometry)
-      }
-      else if(length(input$suburb == 3)) {
-        top <- map_subset %>%
-          filter(suburb_name == input$suburb[[3]]) %>%
-          st_centroid(geometry)
-      }     
+      length_check <- length(input$suburb)
       
-      top_lat <- top$geometry[[1]][1]
-      top_lng <- top$geometry[[1]][2]
+      if(length_check== 1) {
+          top <- map_subset %>%
+              filter(suburb_name == input$suburb[[1]]) %>%
+              st_centroid(geometry)
+          top_lat <- top$geometry[[1]][1]
+          top_lng <- top$geometry[[1]][2]
+      }
+      else if(length_check== 2)  {
+          top <- map_subset %>%
+              filter(suburb_name == input$suburb[[2]]) %>%
+              st_centroid(geometry)
+          top_lat <- top$geometry[[1]][1]
+          top_lng <- top$geometry[[1]][2]
+      }
+      else if(length_check== 3)  {
+          top <- map_subset %>%
+              filter(suburb_name == input$suburb[[3]]) %>%
+              st_centroid(geometry)
+          top_lat <- top$geometry[[1]][1]
+          top_lng <- top$geometry[[1]][2]
+      }    
       
       leafletProxy("plot_3") %>%
         clearShapes() %>%
-        flyTo(top,lng = top_lat,lat = top_lng,zoom = 10) %>%
         addPolygons(data = map_subset,
                     weight = 1, 
                     fillColor = "red", 
                     color = "black",
                     opacity = 1,
-                    fillOpacity = 0.8)
+                    fillOpacity = 0.8,
+                    popup = leafpop::popupTable(map_presentation, zcol = c(2,4,6,7,8),feature.id = FALSE, row.numbers = FALSE)) %>%
+        flyTo(top,lng = top_lat,lat = top_lng,zoom = 10)
     })
   }
   # [4] ---- Run the Application ----
