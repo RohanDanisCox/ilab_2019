@@ -341,6 +341,11 @@
   saveRDS(comparison_scaling_data,"similarity_app/data/comparison_scaling_data.rds")
   
   # [2b] ---- Testing Objects ----
+  
+  map_presentation <- map %>%
+    set_names(~ str_replace_all(.,"_"," ") %>%
+                str_to_title()) %>%
+    rename(geometry = Geometry)
     
 # [4] ---- Data Sources ---- 
     
