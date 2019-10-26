@@ -117,7 +117,13 @@
            Land_Median = land_median_suburb,
            Dwelling_Density = dwelling_density,
            Annual_Turnover = annual_turnover,
-           Proportion_of_Annual_Turnover = annual_turnover_proportion)
+           Proportion_of_Annual_Turnover = annual_turnover_proportion) %>%
+    mutate(Education = case_when(year <=2015 ~ NA_real_,
+                                 TRUE ~ Education),
+           Green_Score = case_when(year <=2015 ~ NA_real_,
+                                   TRUE ~ Green_Score),
+           Green_Decile = case_when(year <=2015 ~ NA_integer_,
+                                   TRUE ~ Green_Decile))
   
   saveRDS(suburb_data_ready, "suburb_investigation_app/data/suburb_data.rds")
   
@@ -161,86 +167,6 @@
   
   saveRDS(nsw_data, "suburb_investigation_app/data/nsw_data.rds")
   
-  sa4_data <- suburb_data %>%
-    group_by(sa4_name,year) %>%
-    summarise(Violent_Crime = weighted.mean(violent_crime, usual_resident_population, na.rm = TRUE),
-              DASG_Crime = weighted.mean(dasg_crime, usual_resident_population, na.rm = TRUE),
-              Crime = weighted.mean(log_crime_score, usual_resident_population, na.rm = TRUE), 
-              Education = weighted.mean(education_score, usual_resident_population, na.rm = TRUE), 
-              Green_Score = weighted.mean(green_score, usual_resident_population, na.rm = TRUE),
-              Green_Decile = weighted.mean(green_score_decile, usual_resident_population, na.rm = TRUE),
-              Usual_Resident_Population = weighted.mean(usual_resident_population, usual_resident_population, na.rm = TRUE),
-              Working_Age = weighted.mean(working_age_proportion, usual_resident_population, na.rm = TRUE),
-              Senior_Citizens = weighted.mean(senior_citizen_proportion, usual_resident_population, na.rm = TRUE), 
-              Journeys_to_Work = weighted.mean(confirmed_journeys, usual_resident_population, na.rm = TRUE),
-              Journey_to_Work_by_Public_Transport = weighted.mean(public_transport_proportion, usual_resident_population, na.rm = TRUE), 
-              Journey_to_Work_by_Motor_Vehicle = weighted.mean(motor_vehicle_proportion, usual_resident_population, na.rm = TRUE),
-              Journey_to_Work_by_Bicycle_or_Walking = weighted.mean(bicycle_walking_proportion, usual_resident_population, na.rm = TRUE),
-              Number_of_Dwellings = weighted.mean(confirmed_dwellings, usual_resident_population, na.rm = TRUE), 
-              Proportion_of_House = weighted.mean(house_and_semi_proportion, usual_resident_population, na.rm = TRUE),
-              Proportion_of_Units = weighted.mean(unit_proportion, usual_resident_population, na.rm = TRUE),
-              SEIFA_Socio_Economic_Disadvantage = weighted.mean(seifa_econ_disadvantage, usual_resident_population, na.rm = TRUE),
-              SEIFA_Socio_Economic_Advantage_Disadvantage = weighted.mean(seifa_econ_adv_disadv, usual_resident_population, na.rm = TRUE),
-              SEIFA_Economic_Resources = weighted.mean(seifa_econ_resources, usual_resident_population, na.rm = TRUE),
-              SEIFA_Education_and_Occupation = weighted.mean(seifa_education_occupation, usual_resident_population, na.rm = TRUE),
-              Number_of_Properties = weighted.mean(number_of_properties, usual_resident_population, na.rm = TRUE),
-              Median_Land_Value = weighted.mean(median_land_value, usual_resident_population, na.rm = TRUE),
-              Median_Land_Value_Per_Sq_M = weighted.mean(median_land_value_per_sqm, usual_resident_population, na.rm = TRUE),
-              ARIA_Overall_Services = weighted.mean(aria_overall, usual_resident_population, na.rm = TRUE),
-              ARIA_Education_Services = weighted.mean(aria_education, usual_resident_population, na.rm = TRUE),
-              ARIA_Health_Services = weighted.mean(aria_health, usual_resident_population, na.rm = TRUE),
-              ARIA_Shopping_Services = weighted.mean(aria_shopping, usual_resident_population, na.rm = TRUE),
-              ARIA_Public_Transport_Services = weighted.mean(aria_public_transport, usual_resident_population, na.rm = TRUE),
-              ARIA_Financial_Postal_Services = weighted.mean(aria_financial_postal, usual_resident_population, na.rm = TRUE),
-              House_Median = weighted.mean(house_median_suburb, usual_resident_population, na.rm = TRUE),
-              Apartment_Median = weighted.mean(apartment_median_suburb, usual_resident_population, na.rm = TRUE),
-              Land_Median = weighted.mean(land_median_suburb, usual_resident_population, na.rm = TRUE),
-              Dwelling_Density = weighted.mean(dwelling_density, usual_resident_population, na.rm = TRUE),
-              Annual_Turnover = weighted.mean(annual_turnover, usual_resident_population, na.rm = TRUE),
-              Proportion_of_Annual_Turnover = weighted.mean(annual_turnover_proportion, usual_resident_population, na.rm = TRUE))
-  
-  saveRDS(sa4_data, "suburb_investigation_app/data/sa4_data.rds")
-  
-  sa3_data <- suburb_data %>%
-    group_by(sa3_name,year) %>%
-    summarise(Violent_Crime = weighted.mean(violent_crime, usual_resident_population, na.rm = TRUE),
-              DASG_Crime = weighted.mean(dasg_crime, usual_resident_population, na.rm = TRUE),
-              Crime = weighted.mean(log_crime_score, usual_resident_population, na.rm = TRUE), 
-              Education = weighted.mean(education_score, usual_resident_population, na.rm = TRUE), 
-              Green_Score = weighted.mean(green_score, usual_resident_population, na.rm = TRUE),
-              Green_Decile = weighted.mean(green_score_decile, usual_resident_population, na.rm = TRUE),
-              Usual_Resident_Population = weighted.mean(usual_resident_population, usual_resident_population, na.rm = TRUE),
-              Working_Age = weighted.mean(working_age_proportion, usual_resident_population, na.rm = TRUE),
-              Senior_Citizens = weighted.mean(senior_citizen_proportion, usual_resident_population, na.rm = TRUE), 
-              Journeys_to_Work = weighted.mean(confirmed_journeys, usual_resident_population, na.rm = TRUE),
-              Journey_to_Work_by_Public_Transport = weighted.mean(public_transport_proportion, usual_resident_population, na.rm = TRUE), 
-              Journey_to_Work_by_Motor_Vehicle = weighted.mean(motor_vehicle_proportion, usual_resident_population, na.rm = TRUE),
-              Journey_to_Work_by_Bicycle_or_Walking = weighted.mean(bicycle_walking_proportion, usual_resident_population, na.rm = TRUE),
-              Number_of_Dwellings = weighted.mean(confirmed_dwellings, usual_resident_population, na.rm = TRUE), 
-              Proportion_of_House = weighted.mean(house_and_semi_proportion, usual_resident_population, na.rm = TRUE),
-              Proportion_of_Units = weighted.mean(unit_proportion, usual_resident_population, na.rm = TRUE),
-              SEIFA_Socio_Economic_Disadvantage = weighted.mean(seifa_econ_disadvantage, usual_resident_population, na.rm = TRUE),
-              SEIFA_Socio_Economic_Advantage_Disadvantage = weighted.mean(seifa_econ_adv_disadv, usual_resident_population, na.rm = TRUE),
-              SEIFA_Economic_Resources = weighted.mean(seifa_econ_resources, usual_resident_population, na.rm = TRUE),
-              SEIFA_Education_and_Occupation = weighted.mean(seifa_education_occupation, usual_resident_population, na.rm = TRUE),
-              Number_of_Properties = weighted.mean(number_of_properties, usual_resident_population, na.rm = TRUE),
-              Median_Land_Value = weighted.mean(median_land_value, usual_resident_population, na.rm = TRUE),
-              Median_Land_Value_Per_Sq_M = weighted.mean(median_land_value_per_sqm, usual_resident_population, na.rm = TRUE),
-              ARIA_Overall_Services = weighted.mean(aria_overall, usual_resident_population, na.rm = TRUE),
-              ARIA_Education_Services = weighted.mean(aria_education, usual_resident_population, na.rm = TRUE),
-              ARIA_Health_Services = weighted.mean(aria_health, usual_resident_population, na.rm = TRUE),
-              ARIA_Shopping_Services = weighted.mean(aria_shopping, usual_resident_population, na.rm = TRUE),
-              ARIA_Public_Transport_Services = weighted.mean(aria_public_transport, usual_resident_population, na.rm = TRUE),
-              ARIA_Financial_Postal_Services = weighted.mean(aria_financial_postal, usual_resident_population, na.rm = TRUE),
-              House_Median = weighted.mean(house_median_suburb, usual_resident_population, na.rm = TRUE),
-              Apartment_Median = weighted.mean(apartment_median_suburb, usual_resident_population, na.rm = TRUE),
-              Land_Median = weighted.mean(land_median_suburb, usual_resident_population, na.rm = TRUE),
-              Dwelling_Density = weighted.mean(dwelling_density, usual_resident_population, na.rm = TRUE),
-              Annual_Turnover = weighted.mean(annual_turnover, usual_resident_population, na.rm = TRUE),
-              Proportion_of_Annual_Turnover = weighted.mean(annual_turnover_proportion, usual_resident_population, na.rm = TRUE))
-  
-  saveRDS(sa3_data, "suburb_investigation_app/data/sa3_data.rds")
-
 # [1b] ---- Testing Objects ----
 
   haberfield <- map %>%
@@ -457,4 +383,88 @@
     
     saveRDS(data_sources,"similarity_app/data/data_sources.rds")
     saveRDS(data_sources,"leaflet_investigation_app/data/data_sources.rds")
+    
+    
+# [5] ---- Garbage ----
+    
+    sa4_data <- suburb_data %>%
+      group_by(sa4_name,year) %>%
+      summarise(Violent_Crime = weighted.mean(violent_crime, usual_resident_population, na.rm = TRUE),
+                DASG_Crime = weighted.mean(dasg_crime, usual_resident_population, na.rm = TRUE),
+                Crime = weighted.mean(log_crime_score, usual_resident_population, na.rm = TRUE), 
+                Education = weighted.mean(education_score, usual_resident_population, na.rm = TRUE), 
+                Green_Score = weighted.mean(green_score, usual_resident_population, na.rm = TRUE),
+                Green_Decile = weighted.mean(green_score_decile, usual_resident_population, na.rm = TRUE),
+                Usual_Resident_Population = weighted.mean(usual_resident_population, usual_resident_population, na.rm = TRUE),
+                Working_Age = weighted.mean(working_age_proportion, usual_resident_population, na.rm = TRUE),
+                Senior_Citizens = weighted.mean(senior_citizen_proportion, usual_resident_population, na.rm = TRUE), 
+                Journeys_to_Work = weighted.mean(confirmed_journeys, usual_resident_population, na.rm = TRUE),
+                Journey_to_Work_by_Public_Transport = weighted.mean(public_transport_proportion, usual_resident_population, na.rm = TRUE), 
+                Journey_to_Work_by_Motor_Vehicle = weighted.mean(motor_vehicle_proportion, usual_resident_population, na.rm = TRUE),
+                Journey_to_Work_by_Bicycle_or_Walking = weighted.mean(bicycle_walking_proportion, usual_resident_population, na.rm = TRUE),
+                Number_of_Dwellings = weighted.mean(confirmed_dwellings, usual_resident_population, na.rm = TRUE), 
+                Proportion_of_House = weighted.mean(house_and_semi_proportion, usual_resident_population, na.rm = TRUE),
+                Proportion_of_Units = weighted.mean(unit_proportion, usual_resident_population, na.rm = TRUE),
+                SEIFA_Socio_Economic_Disadvantage = weighted.mean(seifa_econ_disadvantage, usual_resident_population, na.rm = TRUE),
+                SEIFA_Socio_Economic_Advantage_Disadvantage = weighted.mean(seifa_econ_adv_disadv, usual_resident_population, na.rm = TRUE),
+                SEIFA_Economic_Resources = weighted.mean(seifa_econ_resources, usual_resident_population, na.rm = TRUE),
+                SEIFA_Education_and_Occupation = weighted.mean(seifa_education_occupation, usual_resident_population, na.rm = TRUE),
+                Number_of_Properties = weighted.mean(number_of_properties, usual_resident_population, na.rm = TRUE),
+                Median_Land_Value = weighted.mean(median_land_value, usual_resident_population, na.rm = TRUE),
+                Median_Land_Value_Per_Sq_M = weighted.mean(median_land_value_per_sqm, usual_resident_population, na.rm = TRUE),
+                ARIA_Overall_Services = weighted.mean(aria_overall, usual_resident_population, na.rm = TRUE),
+                ARIA_Education_Services = weighted.mean(aria_education, usual_resident_population, na.rm = TRUE),
+                ARIA_Health_Services = weighted.mean(aria_health, usual_resident_population, na.rm = TRUE),
+                ARIA_Shopping_Services = weighted.mean(aria_shopping, usual_resident_population, na.rm = TRUE),
+                ARIA_Public_Transport_Services = weighted.mean(aria_public_transport, usual_resident_population, na.rm = TRUE),
+                ARIA_Financial_Postal_Services = weighted.mean(aria_financial_postal, usual_resident_population, na.rm = TRUE),
+                House_Median = weighted.mean(house_median_suburb, usual_resident_population, na.rm = TRUE),
+                Apartment_Median = weighted.mean(apartment_median_suburb, usual_resident_population, na.rm = TRUE),
+                Land_Median = weighted.mean(land_median_suburb, usual_resident_population, na.rm = TRUE),
+                Dwelling_Density = weighted.mean(dwelling_density, usual_resident_population, na.rm = TRUE),
+                Annual_Turnover = weighted.mean(annual_turnover, usual_resident_population, na.rm = TRUE),
+                Proportion_of_Annual_Turnover = weighted.mean(annual_turnover_proportion, usual_resident_population, na.rm = TRUE))
+    
+    saveRDS(sa4_data, "suburb_investigation_app/data/sa4_data.rds")
+    
+    sa3_data <- suburb_data %>%
+      group_by(sa3_name,year) %>%
+      summarise(Violent_Crime = weighted.mean(violent_crime, usual_resident_population, na.rm = TRUE),
+                DASG_Crime = weighted.mean(dasg_crime, usual_resident_population, na.rm = TRUE),
+                Crime = weighted.mean(log_crime_score, usual_resident_population, na.rm = TRUE), 
+                Education = weighted.mean(education_score, usual_resident_population, na.rm = TRUE), 
+                Green_Score = weighted.mean(green_score, usual_resident_population, na.rm = TRUE),
+                Green_Decile = weighted.mean(green_score_decile, usual_resident_population, na.rm = TRUE),
+                Usual_Resident_Population = weighted.mean(usual_resident_population, usual_resident_population, na.rm = TRUE),
+                Working_Age = weighted.mean(working_age_proportion, usual_resident_population, na.rm = TRUE),
+                Senior_Citizens = weighted.mean(senior_citizen_proportion, usual_resident_population, na.rm = TRUE), 
+                Journeys_to_Work = weighted.mean(confirmed_journeys, usual_resident_population, na.rm = TRUE),
+                Journey_to_Work_by_Public_Transport = weighted.mean(public_transport_proportion, usual_resident_population, na.rm = TRUE), 
+                Journey_to_Work_by_Motor_Vehicle = weighted.mean(motor_vehicle_proportion, usual_resident_population, na.rm = TRUE),
+                Journey_to_Work_by_Bicycle_or_Walking = weighted.mean(bicycle_walking_proportion, usual_resident_population, na.rm = TRUE),
+                Number_of_Dwellings = weighted.mean(confirmed_dwellings, usual_resident_population, na.rm = TRUE), 
+                Proportion_of_House = weighted.mean(house_and_semi_proportion, usual_resident_population, na.rm = TRUE),
+                Proportion_of_Units = weighted.mean(unit_proportion, usual_resident_population, na.rm = TRUE),
+                SEIFA_Socio_Economic_Disadvantage = weighted.mean(seifa_econ_disadvantage, usual_resident_population, na.rm = TRUE),
+                SEIFA_Socio_Economic_Advantage_Disadvantage = weighted.mean(seifa_econ_adv_disadv, usual_resident_population, na.rm = TRUE),
+                SEIFA_Economic_Resources = weighted.mean(seifa_econ_resources, usual_resident_population, na.rm = TRUE),
+                SEIFA_Education_and_Occupation = weighted.mean(seifa_education_occupation, usual_resident_population, na.rm = TRUE),
+                Number_of_Properties = weighted.mean(number_of_properties, usual_resident_population, na.rm = TRUE),
+                Median_Land_Value = weighted.mean(median_land_value, usual_resident_population, na.rm = TRUE),
+                Median_Land_Value_Per_Sq_M = weighted.mean(median_land_value_per_sqm, usual_resident_population, na.rm = TRUE),
+                ARIA_Overall_Services = weighted.mean(aria_overall, usual_resident_population, na.rm = TRUE),
+                ARIA_Education_Services = weighted.mean(aria_education, usual_resident_population, na.rm = TRUE),
+                ARIA_Health_Services = weighted.mean(aria_health, usual_resident_population, na.rm = TRUE),
+                ARIA_Shopping_Services = weighted.mean(aria_shopping, usual_resident_population, na.rm = TRUE),
+                ARIA_Public_Transport_Services = weighted.mean(aria_public_transport, usual_resident_population, na.rm = TRUE),
+                ARIA_Financial_Postal_Services = weighted.mean(aria_financial_postal, usual_resident_population, na.rm = TRUE),
+                House_Median = weighted.mean(house_median_suburb, usual_resident_population, na.rm = TRUE),
+                Apartment_Median = weighted.mean(apartment_median_suburb, usual_resident_population, na.rm = TRUE),
+                Land_Median = weighted.mean(land_median_suburb, usual_resident_population, na.rm = TRUE),
+                Dwelling_Density = weighted.mean(dwelling_density, usual_resident_population, na.rm = TRUE),
+                Annual_Turnover = weighted.mean(annual_turnover, usual_resident_population, na.rm = TRUE),
+                Proportion_of_Annual_Turnover = weighted.mean(annual_turnover_proportion, usual_resident_population, na.rm = TRUE))
+    
+    saveRDS(sa3_data, "suburb_investigation_app/data/sa3_data.rds")
+    
     
