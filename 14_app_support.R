@@ -346,6 +346,7 @@
   object_size(simple_map)
   
   saveRDS(simple_map,"similarity_app/data/simple_map.rds")
+  saveRDS(comparison_suburb_subset,"similarity_app/data/unscaled_data.rds")
   saveRDS(select_scaled_data,"similarity_app/data/select_scaled_data.rds")
   saveRDS(select_scaling_data,"similarity_app/data/select_scaling_data.rds")
   saveRDS(comparison_scaled_data,"similarity_app/data/comparison_scaled_data.rds")
@@ -482,5 +483,86 @@
                 Proportion_of_Annual_Turnover = weighted.mean(annual_turnover_proportion, usual_resident_population, na.rm = TRUE))
     
     saveRDS(sa3_data, "suburb_investigation_app/data/sa3_data.rds")
+    
+    test <- readRDS("similarity_app/data/select_scaled_data.rds")
+    
+    select_scaler <- readRDS("similarity_app/data/select_scaling_data.rds") %>%
+      filter(variable %in% c("suburb_area_sqkm","log_crime_score","education_score","green_score_decile",
+                             "usual_resident_population","working_age_proportion","senior_citizen_proportion",
+                             "public_transport_proportion","motor_vehicle_proportion","bicycle_walking_proportion",
+                             "house_and_semi_proportion","unit_proportion","dwelling_density",
+                             "seifa_econ_disadvantage","seifa_econ_adv_disadv",
+                             "seifa_econ_resources","seifa_education_occupation",
+                             "median_land_value_per_sqm","house_median_suburb","apartment_median_suburb"))
+    
+    comparison_scaled_data <- test %>%
+      select(suburb_name,sa2_name,sa3_name,sa4_name,year,suburb_area_sqkm,log_crime_score,education_score,green_score_decile,
+             usual_resident_population,working_age_proportion,senior_citizen_proportion,
+             public_transport_proportion,motor_vehicle_proportion,bicycle_walking_proportion,
+             house_and_semi_proportion,unit_proportion,dwelling_density,
+             seifa_econ_disadvantage,seifa_econ_adv_disadv,
+             seifa_econ_resources,seifa_education_occupation,
+             median_land_value_per_sqm,house_median_suburb,apartment_median_suburb)  
+    
+    test_1 <- comparison_scaled_data %>%
+      select(median_land_value_per_sqm) %>%
+      t()
+    
+    
+    scaled_values <- comparison_scaled_data %>%
+      filter(year == 2019) %>%
+      filter(suburb_name == "Haberfield")
+    
+    other_suburbs <- comparison_scaled_data %>%
+      filter(year == 2019) %>%
+      filter(suburb_name != "Haberfield")
+    
+    na_count <- other_suburbs %>%
+        mutate(na_count = rowSums(is.na(other_suburbs))) %>%
+        select(na_count)
+      
+    new <- tibble(new_values = c(1000,3,3,2,
+                                 2000,0.5,0.2,0.1,
+                                 0.5,0.5,0.3,
+                                 0.3,200,1000,1000,
+                                 1000,1000,30,700000,
+                                 600000)) %>%
+      cbind(select_scaler) %>%
+      mutate(scaled_value = (new_values - mean) / sd) %>%
+      select(scaled_value) %>% 
+      rownames_to_column %>%
+      gather(variable, value, -rowname) %>% 
+      spread(rowname, value) %>%
+      select(`1`,`2`,`3`,`4`,`5`,`6`,`7`,`8`,`9`,`10`,`11`,`12`,`13`,`14`,`15`,`16`,`17`,`18`,`19`,`20`)
+    
+    mtcars %>% 
+      rownames_to_column %>%
+      gather(variable, value, -rowname) %>% 
+      spread(rowname, value)
+    
+    dist <- as.data.frame(rdist_na(scaled_values[,6:25],other_suburbs[,6:25])) %>%
+        rename(distance = V1) #%>%
+        #cbind(na_count) %>%
+        #mutate(similarity = round(1/(1+(distance/(20-na_count))),4)) %>%
+        #select(distance,similarity)
+    
+    dist <- as.data.frame(rdist_na(new[,2:21],other_suburbs[,6:25])) %>%
+      rename(distance = V1) #%>%
+    #cbind(na_count) %>%
+    #mutate(similarity = round(1/(1+(distance/(20-na_count))),4)) %>%
+    #select(distance,similarity)
+    
+    
+    rdist_na <- function(X,Y){
+      if (!is.matrix(X)) 
+        X = as.matrix(X)
+      if (!is.matrix(Y)) 
+        Y = as.matrix(Y)
+      distances <- matrix(pdist(X,Y)@dist, ncol=nrow(X), byrow = TRUE)
+      #count NAs
+      na.count <- sapply(1:nrow(X),function(i){rowSums(is.na(Y) | is.na(X[i,]))})
+      #scaling to number of cols
+      distances * sqrt(ncol(X)/(ncol(X) - na.count))
+    }
     
     

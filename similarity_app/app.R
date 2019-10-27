@@ -17,6 +17,9 @@
     library(shinyjs)
     library(purrr)
     library(stringr)
+    library(shinyWidgets)
+    library(tibble)
+    library(tidyr)
 
 # [1] ---- Load global data ----
 
@@ -26,6 +29,15 @@
     
     suburb_choice <- choices %>% distinct(suburb_name) %>% arrange(suburb_name) %>% pull()
     
+    unscaled_data <- readRDS("data/unscaled_data.rds") %>%
+        select(suburb_name,sa2_name,sa3_name,sa4_name,year,suburb_area_sqkm,log_crime_score,education_score,green_score_decile,
+               usual_resident_population,working_age_proportion,senior_citizen_proportion,
+               public_transport_proportion,motor_vehicle_proportion,bicycle_walking_proportion,
+               house_and_semi_proportion,unit_proportion,dwelling_density,
+               seifa_econ_disadvantage,seifa_econ_adv_disadv,
+               seifa_econ_resources,seifa_education_occupation,
+               median_land_value_per_sqm,house_median_suburb,apartment_median_suburb) ##### LIMITED TO CERTAIN VARIABLES - COULD ADJUST
+    
     select_scaled_data <- readRDS("data/select_scaled_data.rds") %>%
         select(suburb_name,sa2_name,sa3_name,sa4_name,suburb_area_sqkm,log_crime_score,education_score,green_score_decile,
                usual_resident_population,working_age_proportion,senior_citizen_proportion,
@@ -33,7 +45,7 @@
                house_and_semi_proportion,unit_proportion,dwelling_density,
                seifa_econ_disadvantage,seifa_econ_adv_disadv,
                seifa_econ_resources,seifa_education_occupation,
-               median_land_value_per_sqm,house_median_suburb,apartment_median_suburb)              ##### NEED TO REMOVE THIS LATER
+               median_land_value_per_sqm,house_median_suburb,apartment_median_suburb)              ##### LIMITED TO CERTAIN VARIABLES - COULD ADJUST
     
     select_scaler <- readRDS("data/select_scaling_data.rds") %>%
         filter(variable %in% c("suburb_area_sqkm","log_crime_score","education_score","green_score_decile",
@@ -42,7 +54,7 @@
                                "house_and_semi_proportion","unit_proportion","dwelling_density",
                                "seifa_econ_disadvantage","seifa_econ_adv_disadv",
                                "seifa_econ_resources","seifa_education_occupation",
-                               "median_land_value_per_sqm","house_median_suburb","apartment_median_suburb")) ##### NEED TO REMOVE THIS LATER
+                               "median_land_value_per_sqm","house_median_suburb","apartment_median_suburb")) ##### LIMITED TO CERTAIN VARIABLES - COULD ADJUST
     
     comparison_scaled_data <- readRDS("data/comparison_scaled_data.rds") %>%
         select(suburb_name,sa2_name,sa3_name,sa4_name,year,suburb_area_sqkm,log_crime_score,education_score,green_score_decile,
@@ -51,7 +63,7 @@
                house_and_semi_proportion,unit_proportion,dwelling_density,
                seifa_econ_disadvantage,seifa_econ_adv_disadv,
                seifa_econ_resources,seifa_education_occupation,
-               median_land_value_per_sqm,house_median_suburb,apartment_median_suburb)               ##### NEED TO REMOVE THIS LATER
+               median_land_value_per_sqm,house_median_suburb,apartment_median_suburb)               ##### LIMITED TO CERTAIN VARIABLES - COULD ADJUST
     
     comparison_scaler <- readRDS("data/comparison_scaling_data.rds") %>%
         filter(variable %in% c("suburb_area_sqkm","log_crime_score","education_score","green_score_decile",
@@ -60,12 +72,7 @@
                                "house_and_semi_proportion","unit_proportion","dwelling_density",
                                "seifa_econ_disadvantage","seifa_econ_adv_disadv",
                                "seifa_econ_resources","seifa_education_occupation",
-                               "median_land_value_per_sqm","house_median_suburb","apartment_median_suburb")) ##### NEED TO REMOVE THIS LATER
-    
-    data <- map %>%
-        st_drop_geometry()
-    
-    presented_data <- 
+                               "median_land_value_per_sqm","house_median_suburb","apartment_median_suburb")) ##### LIMITED TO CERTAIN VARIABLES - COULD ADJUST
     
     data_sources <- readRDS("data/data_sources.rds")
 
@@ -82,13 +89,11 @@
         distances * sqrt(ncol(X)/(ncol(X) - na.count))
     }
 
-#pal_similarity <- colorNumeric(palette = c("white","darkred"),domain = data$similarity_score)
-
 # [2] ---- Define UI ----
 
     ui <- navbarPage("Suburb Similarity",
                      tabPanel("Introduction",
-                              titlePanel("Welcome to the Suburb Similarity Application"),
+                              titlePanel("Investigating Suburb Similarity"),
                               fluidRow(column(10, offset = 1,
                                               includeMarkdown("data/markdown.Rmd"),
                                               dataTableOutput("intro_table")))
@@ -96,9 +101,11 @@
                      tabPanel("Compare to Suburbs",
                               sidebarLayout(
                                   sidebarPanel(htmlOutput("calculate_2"),
+                                               br(),
                                                htmlOutput("year"),
-                                               selectizeInput("suburb", label = "Search for a suburb:", choices = NULL),
-                                               htmlOutput("number_2")
+                                               selectizeInput("suburb", label = "Search for a suburb:", choices = suburb_choice),
+                                               htmlOutput("number_2"),
+                                               materialSwitch(inputId = "include_2", label = "Exclude Price Metrics:", value = FALSE, status = "danger")
                                   ),
                                   # Show a plot of the generated distribution
                                   mainPanel(
@@ -114,6 +121,9 @@
                                       id = "side-panel",
                                       htmlOutput("calculate", inline = TRUE),
                                       htmlOutput("reset", inline = TRUE),
+                                      br(),
+                                      br(),
+                                      materialSwitch(inputId = "include", label = "Exclude Price Metrics:", value = FALSE, status = "danger"),
                                       htmlOutput("number"),
                                       htmlOutput("size"),
                                       htmlOutput("crime"),
@@ -181,14 +191,23 @@
 # [6] ---- Establish the Reactive UI components for the 'Select' tab ----
     
     selected_suburb <- reactive({
-        data %>% filter(suburb_name == input$suburb)
+        if(is.null(input$year)) {
+            unscaled_data %>% 
+                filter(suburb_name == input$suburb) %>%
+                filter(year == 2019)
+        }
+        else{
+            unscaled_data %>% 
+                filter(suburb_name == input$suburb) %>%
+                filter(year == input$year)
+        }
     })    
     
     output$calculate = renderUI({
         actionButton(inputId = "calculate", label = "Calculate Similarity")
     })
     output$reset = renderUI({
-        actionButton(inputId = "reset", label = "Reset Values")
+        actionButton(inputId = "reset", label = paste0("Reset to ",input$suburb," in ", ifelse(is.null(input$year),2019,input$year)))
     })
     output$number = renderUI({
         sliderInput(inputId = "number",
@@ -343,6 +362,7 @@
 # [7] ---- Calculate the Suburb Similarity Tab ----
     
     chosen_suburb <- eventReactive(input$calculate_2,{
+        
         scaled_values <- comparison_scaled_data %>%
             filter(year == input$year) %>%
             filter(suburb_name == input$suburb)
@@ -351,20 +371,36 @@
             filter(year == 2019) %>%
             filter(suburb_name != input$suburb)
         
-        na_count <- other_suburbs %>%
-            mutate(na_count = rowSums(is.na(other_suburbs))) %>%
-            select(na_count)
+        if (input$include_2 == FALSE) {
+            na_count <- other_suburbs %>%
+                mutate(na_count = rowSums(is.na(other_suburbs))) %>%
+                select(na_count)
         
-        dist <- as.data.frame(rdist_na(scaled_values[,6:25],other_suburbs[,6:25])) %>%
-            rename(distance = V1) %>%
-            cbind(na_count) %>%
-            mutate(similarity = round(1/(1+(distance/(20-na_count))),4)) %>%
-            select(-na_count)
-        
+            dist <- as.data.frame(rdist_na(scaled_values[,6:25],other_suburbs[,6:25])) %>%
+                rename(distance = V1) %>%
+                cbind(na_count) %>%
+                mutate(similarity = round(1/(1+(distance/(20-na_count))),4)) %>%
+                select(distance,similarity)
+        }
+        else {
+            na_count_temp <- other_suburbs %>%
+                select(-c(median_land_value_per_sqm,house_median_suburb,apartment_median_suburb))
+            
+            na_count <- na_count_temp %>%
+                mutate(na_count = rowSums(is.na(na_count_temp))) %>%
+                select(na_count)
+            
+            dist <- as.data.frame(rdist_na(scaled_values[,6:22],other_suburbs[,6:22])) %>%
+                rename(distance = V1) %>%
+                cbind(na_count) %>%
+                mutate(similarity = round(1/(1+(distance/(17-na_count))),4)) %>%
+                select(distance,similarity)
+        }
+            
         combined <- other_suburbs %>% 
-            select(suburb_name,sa2_name,sa3_name,sa4_name) %>%
-            cbind(dist) 
-        
+                select(suburb_name,sa2_name,sa3_name,sa4_name) %>%
+                cbind(dist) 
+            
         combined
     })
     
@@ -422,33 +458,53 @@
     })
     
     new_values <- eventReactive(input$calculate,{
+        
         new <- tibble(new_values = c(input$size,input$crime,input$education,input$green,
-                                     input$population,input$working,input$seniors,input$public_transport,
-                                     input$motor_vehicle,input$bicycle_walking,input$house,
-                                     input$unit,input$density,input$seifa_1,input$seifa_2,
-                                     input$seifa_3,input$seifa_4,input$land_sqm,input$house_median,
-                                     input$unit_median)) %>%
+                                    input$population,input$working,input$seniors,input$public_transport,
+                                    input$motor_vehicle,input$bicycle_walking,input$house,
+                                    input$unit,input$density,input$seifa_1,input$seifa_2,
+                                    input$seifa_3,input$seifa_4,input$land_sqm,input$house_median,
+                                    input$unit_median)) %>%
             cbind(select_scaler) %>%
             mutate(scaled_value = (new_values - mean) / sd) %>%
             select(scaled_value) %>% 
-            t()
+            rownames_to_column %>%
+            gather(variable, value, -rowname) %>% 
+            spread(rowname, value) %>%
+            select(`1`,`2`,`3`,`4`,`5`,`6`,`7`,`8`,`9`,`10`,`11`,`12`,`13`,`14`,`15`,`16`,`17`,`18`,`19`,`20`)
         
         suburb <- select_scaled_data
         
-        na_count <- select_scaled_data %>%
-            mutate(na_count = rowSums(is.na(select_scaled_data))) %>%
-            select(na_count)
-        
-        dist <- as.data.frame(rdist_na(new,suburb[,5:24])) %>%
-            rename(distance = V1) %>%
-            cbind(na_count) %>%
-            mutate(similarity = round(1/(1+(distance/(20))),4)) %>%
-            select(-na_count)
-        
+        if (input$include == FALSE) {
+            na_count <- suburb %>%
+                mutate(na_count = rowSums(is.na(suburb))) %>%
+                select(na_count)
+            
+            dist <- as.data.frame(rdist_na(new,suburb[,5:24])) %>%
+                rename(distance = V1) %>%
+                cbind(na_count) %>%
+                mutate(similarity = round(1/(1+(distance/(20-na_count))),4)) %>%
+                select(distance,similarity)  
+        }
+        else {
+            na_count_temp <- suburb %>%
+                select(-c(median_land_value_per_sqm,house_median_suburb,apartment_median_suburb))
+                
+            na_count <- na_count_temp %>%
+                mutate(na_count = rowSums(is.na(na_count_temp))) %>%
+                select(na_count)
+            
+            dist <- as.data.frame(rdist_na(new[,1:17],suburb[,5:21])) %>%
+                rename(distance = V1) %>%
+                cbind(na_count) %>%
+                mutate(similarity = round(1/(1+(distance/(17-na_count))),4)) %>%
+                select(distance,similarity)
+        }
+            
         combined <- suburb %>% 
-            select(suburb_name,sa2_name,sa3_name,sa4_name) %>%
-            cbind(dist) 
-        
+                select(suburb_name,sa2_name,sa3_name,sa4_name) %>%
+                cbind(dist) 
+            
         combined
     })
     
