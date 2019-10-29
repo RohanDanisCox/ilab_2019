@@ -416,7 +416,7 @@
     
     output$map_2 <- renderLeaflet({
         leaflet(map) %>%
-            addTiles() %>%
+            addProviderTiles(providers$Wikimedia) %>%
             setView(146.9211,-33.2532, zoom = 6)
     })
     
@@ -520,7 +520,7 @@
         
     output$map_1 <- renderLeaflet({
         leaflet(map,options = leafletOptions(minZoom = 6)) %>%
-            addTiles() %>%
+            addProviderTiles(providers$Wikimedia) %>%
             setView(146.9211,-33.2532, zoom = 6) 
     })
     

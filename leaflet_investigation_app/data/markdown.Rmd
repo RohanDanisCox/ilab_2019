@@ -14,7 +14,7 @@ My blog describing my progress throught iLab 2019 and building these apps is ava
 
 This application is one of three I have built for my iLab 2019 project. The other two are:
 
-* A suburb investigation app which allows users to look closely at a given suburb and inspect variables. Find it here: <https://rohandaniscox.shinyapps.io/suburb_investigation_app/>
-* A suburb comparison app which allows users to investigate suburbs in 2019 which are similar to either a set of inputs or another suburb. Find it here: <https://rohandaniscox.shinyapps.io/similarity_app/>
+* A suburb investigation app which allows users to look closely at up to three suburbs and inspect variables. Find it here: <https://rohandaniscox.shinyapps.io/suburb_investigation_app/>
+* A suburb comparison app which allows users to investigate which suburbs in 2019 are similar in characteristics to other suburbs in past years. Find it here: <https://rohandaniscox.shinyapps.io/similarity_app/>
 
 This application makes use of the Leaflet mapping package and combines data from the following sources:
