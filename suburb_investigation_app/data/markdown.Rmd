@@ -1,0 +1,30 @@
+---
+title: "Suburb Investigator App"
+author: "Rohan Danis-Cox"
+date: "6/10/2019"
+output: html_document
+---
+<br>
+This application allows users to navigate through suburbs in NSW and investigate qualities measured on each suburb. 
+
+Up to 3 suburbs can be selected, start typing the name of the suburb to see a shortened list.
+
+The display includes: 
+
+* An interactive map showing each of the suburbs selected, highlighted in red.
+
+* A line graph showing the change over time in the selected variable.
+
+* A density graph showing the full distribution for the selected variable across NSW. The vertical lines indicate years of the selected suburb within that distribution.
+
+Full code can be found here: <https://github.com/RohanDanisCox/ilab_2019/>
+
+My blog describing the activities take is availabel here: <https://16-3327.ca.uts.edu.au/ilab-1-2019/>
+
+This application is one of three I have built for my iLab 2019 project. The other two are:
+
+* A map-based variable investigation app using Leaflet, which allows users to visualise groupings of variables across all of NSW. Find it here: <https://rohandaniscox.shinyapps.io/leaflet_investigation_app/>
+* A suburb comparison app which allows users to investigate which suburbs in 2019 are similar in characteristics to other suburbs in past years. Find it here: <https://rohandaniscox.shinyapps.io/similarity_app/>
+
+This application makes use of the Leaflet mapping package and combines data from the following sources:
+

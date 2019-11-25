@@ -33,6 +33,9 @@ sudo gdebi rstudio-server-1.2.1335-amd64.deb
 # Spatial mapping libraries for R 
 sudo apt-get install libgdal1-dev libproj-dev
 
+# Cairo to allow for mapview
+sudo apt-get install libcairo2-dev
+
 
 ## Important: Can now access the external IP given by GCP and add :8787 - e.g. http://35.189.30.38:8787/ to access RStudio Server
 ## Important: Log in with user rohan_daniscox and the password made in the first step

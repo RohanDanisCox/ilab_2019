@@ -1,0 +1,9 @@
+name: "ilab_2019"
+output_dir: "../docs"
+navbar:
+  title: "iLab 2019"
+  left:
+    - text: "Introduction"
+      href: index.html
+    - text: "Case Study"
+      href: case_study.html

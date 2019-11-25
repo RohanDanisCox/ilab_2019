@@ -1,0 +1,22 @@
+---
+title: "NSW Property Project"
+---
+
+<br>
+
+Welcome to the case study I have completed on NSW Property. I've built this website as part of my iLab 2019 course, in the UTS Master of Data Science and Innovation.
+
+This case study covers the period from the year 2000 until the end of June 2019. I've tried to capture several interesting stories that I've uncovered in the short time I have been investigating this data set. I believe there are many more interesting stories within this data set and I'd encourage anyone interested to look through the apps I have built ([Leaflet Investigator](https://rohandaniscox.shinyapps.io/leaflet_investigation_app/), [Similarity](https://rohandaniscox.shinyapps.io/similarity_app/) & [Suburb Investigator](https://rohandaniscox.shinyapps.io/suburb_investigation_app/)) or even the source code, available from my [Github](https://github.com/RohanDanisCox/ilab_2019). 
+
+I've also been blogging my progress through iLab 2019 on [CICAround](https://16-3327.ca.uts.edu.au/ilab-1-2019/) which details most of the many struggles I faced developing this case study and the above apps.
+
+The below table outlines the data sources I accessed and the licenses by which I am using them.
+
+```{r echo = FALSE,message =FALSE, warning=FALSE}
+library(knitr)
+library(kableExtra)
+data_sources <- readRDS("data_sources.rds")
+
+kable(data_sources, format = "html", escape = F) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"))
+```
