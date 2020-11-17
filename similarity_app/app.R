@@ -377,7 +377,7 @@
                 select(na_count)
         
             dist <- as.data.frame(rdist_na(scaled_values[,6:25],other_suburbs[,6:25])) %>%
-                rename(distance = V1) %>%
+                dplyr::rename(distance = V1) %>%
                 cbind(na_count) %>%
                 mutate(similarity = round(1/(1+(distance/(20-na_count))),4)) %>%
                 select(distance,similarity)
@@ -391,7 +391,7 @@
                 select(na_count)
             
             dist <- as.data.frame(rdist_na(scaled_values[,6:22],other_suburbs[,6:22])) %>%
-                rename(distance = V1) %>%
+                dplyr::rename(distance = V1) %>%
                 cbind(na_count) %>%
                 mutate(similarity = round(1/(1+(distance/(17-na_count))),4)) %>%
                 select(distance,similarity)
@@ -416,7 +416,8 @@
     
     output$map_2 <- renderLeaflet({
         leaflet(map) %>%
-            addProviderTiles(providers$Wikimedia) %>%
+            addProviderTiles(providers$CartoDB.Positron) %>%
+            #addProviderTiles(providers$Wikimedia) %>%
             setView(146.9211,-33.2532, zoom = 6)
     })
     
@@ -430,8 +431,8 @@
             arrange(desc(similarity))
         map_presentation <- map_small %>%
             set_names(~ str_replace_all(.,"_"," ") %>%
-                          str_to_title()) %>%
-            rename(geometry = Geometry)
+                          str_to_title()) #%>%
+            #dplyr::rename(geometry = Geometry)
         top <- map_small %>%
             st_centroid(geometry)
         top_lat <- top$geometry[[1]][1]
@@ -481,7 +482,7 @@
                 select(na_count)
             
             dist <- as.data.frame(rdist_na(new,suburb[,5:24])) %>%
-                rename(distance = V1) %>%
+                dplyr::rename(distance = V1) %>%
                 cbind(na_count) %>%
                 mutate(similarity = round(1/(1+(distance/(20-na_count))),4)) %>%
                 select(distance,similarity)  
@@ -495,7 +496,7 @@
                 select(na_count)
             
             dist <- as.data.frame(rdist_na(new[,1:17],suburb[,5:21])) %>%
-                rename(distance = V1) %>%
+                dplyr::rename(distance = V1) %>%
                 cbind(na_count) %>%
                 mutate(similarity = round(1/(1+(distance/(17-na_count))),4)) %>%
                 select(distance,similarity)
@@ -520,7 +521,8 @@
         
     output$map_1 <- renderLeaflet({
         leaflet(map,options = leafletOptions(minZoom = 6)) %>%
-            addProviderTiles(providers$Wikimedia) %>%
+            addProviderTiles(providers$CartoDB.Positron) %>%
+            #addProviderTiles(providers$Wikimedia) %>%
             setView(146.9211,-33.2532, zoom = 6) 
     })
     
@@ -534,8 +536,8 @@
             arrange(desc(similarity)) 
         map_presentation <- map_small %>%
             set_names(~ str_replace_all(.,"_"," ") %>%
-                          str_to_title()) %>%
-            rename(geometry = Geometry)
+                          str_to_title()) #%>%
+            #dplyr::rename(geometry = Geometry)
         top <- map_small %>%
             st_centroid(geometry)
         top_lat <- top$geometry[[1]][1]
